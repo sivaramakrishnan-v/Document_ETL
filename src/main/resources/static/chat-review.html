@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DocumentETL Chat Review UI</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --panel: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --accent: #0f766e;
+            --accent-2: #155e75;
+            --border: #dbe2ea;
+            --warn: #b91c1c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--text);
+            background: radial-gradient(circle at top right, #dff5f4, var(--bg) 45%);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 4px 14px rgba(2, 6, 23, 0.04);
+        }
+
+        h1, h2 { margin: 0 0 10px; }
+        h1 { font-size: 1.45rem; }
+        h2 { font-size: 1.1rem; color: var(--accent-2); }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            border: 0;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: white;
+            padding: 8px 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: #334155;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .metric {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        .metric span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 3px;
+            font-size: 1.25rem;
+        }
+
+        label {
+            display: grid;
+            gap: 4px;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid #cdd6df;
+            border-radius: 8px;
+            padding: 8px;
+            font: inherit;
+        }
+
+        textarea { min-height: 92px; resize: vertical; }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 14px;
+        }
+
+        .log {
+            max-height: 180px;
+            overflow: auto;
+            background: #0f172a;
+            color: #d1fae5;
+            font-family: "Consolas", monospace;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .log .error { color: #fecaca; }
+
+        .answer {
+            white-space: pre-wrap;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 80px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            padding: 8px 6px;
+            vertical-align: top;
+        }
+
+        th { color: #334155; background: #f8fafc; }
+
+        .tiny { color: var(--muted); font-size: 0.82rem; }
+        .pill {
+            display: inline-block;
+            font-size: 0.78rem;
+            color: #0f172a;
+            background: #e2e8f0;
+            border-radius: 999px;
+            padding: 2px 8px;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+<main class="container">
+    <section class="panel">
+        <h1>DocumentETL Chat Review UI</h1>
+        <p class="tiny">Kafka V2 flow: new or changed files are auto-staged, document events are published, and listeners parse/chunk/embed asynchronously.</p>
+        <div class="controls">
+            <button id="runPipelineBtn">Start Kafka Pipeline</button>
+            <button class="secondary" id="stageBtn">Stage V2</button>
+            <button class="secondary" id="reconcileBtn">Reconcile Embeddings</button>
+            <button class="secondary" id="refreshStatusBtn">Refresh Status</button>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Kafka Pipeline Status</h2>
+        <div id="statusGrid" class="status-grid"></div>
+        <table id="eventsTable">
+            <thead>
+            <tr>
+                <th>Event</th>
+                <th>Topic</th>
+                <th>Document</th>
+                <th>Status</th>
+                <th>Processed</th>
+                <th>Error</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section class="panel">
+        <h2>Chat Inputs</h2>
+        <div class="fields">
+            <label>Question
+                <textarea id="question" placeholder="Ask your question..."></textarea>
+            </label>
+            <label>Golden Answer (optional)
+                <textarea id="goldenAnswer" placeholder="Optional expected answer for evaluation scoring"></textarea>
+            </label>
+        </div>
+        <div class="fields">
+            <label>topK
+                <input id="topK" type="number" min="1" value="5">
+            </label>
+            <label>candidateK
+                <input id="candidateK" type="number" min="1" value="20">
+            </label>
+            <label>mmrLambda (0..1)
+                <input id="mmrLambda" type="number" min="0" max="1" step="0.05" value="0.7">
+            </label>
+        </div>
+        <div class="controls">
+            <button id="askBtn">Ask + Review</button>
+            <span id="meta" class="tiny"></span>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Logs</h2>
+        <div id="log" class="log"></div>
+    </section>
+
+    <section class="panel grid-2">
+        <div>
+            <h2>Answer</h2>
+            <div id="answer" class="answer"></div>
+        </div>
+        <div>
+            <h2>Sources & Evaluations</h2>
+            <div id="sources"></div>
+            <table id="evalTable">
+                <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Score</th>
+                    <th>Reasoning</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Vector Top-K (Candidate Retrieval)</h2>
+        <table id="vectorTable">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Document</th>
+                <th>Similarity</th>
+                <th>Snippet</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section class="panel">
+        <h2>MMR Output</h2>
+        <table id="mmrTable">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Document</th>
+                <th>Similarity</th>
+                <th>MMR Score</th>
+                <th>Max Sim To Selected</th>
+                <th>Snippet</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section class="panel">
+        <h2>Reranker Output</h2>
+        <table id="rerankerTable">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Document</th>
+                <th>Semantic</th>
+                <th>Lexical</th>
+                <th>Phrase Boost</th>
+                <th>Final Score</th>
+                <th>Snippet</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+</main>
+
+<script>
+    const el = (id) => document.getElementById(id);
+
+    function nowIso() {
+        return new Date().toISOString();
+    }
+
+    function logLine(message, isError = false) {
+        const row = document.createElement("div");
+        row.textContent = `[${nowIso()}] ${message}`;
+        if (isError) row.classList.add("error");
+        el("log").prepend(row);
+    }
+
+    async function getJson(url) {
+        const response = await fetch(url, { method: "GET" });
+        if (!response.ok) {
+            const body = await response.text();
+            throw new Error(`HTTP ${response.status} ${response.statusText}: ${body}`);
+        }
+        return response.json();
+    }
+
+    async function callPipelineStep(name, url) {
+        logLine(`${name} -> ${url}`);
+        const result = await getJson(url);
+        logLine(`${name} completed`);
+        return result;
+    }
+
+    function setBusy(isBusy) {
+        ["runPipelineBtn", "stageBtn", "reconcileBtn", "askBtn"].forEach(id => {
+            el(id).disabled = isBusy;
+        });
+    }
+
+    async function stage() {
+        const data = await callPipelineStep("stage v2", "/api/etl/v2/stage");
+        logLine(`stage scanned=${data.scannedFiles ?? 0} persisted=${data.persistedDocuments ?? 0} emitted=${data.emittedEvents ?? 0} unchanged=${data.unchangedFiles ?? 0}`);
+        await refreshStatus(true);
+    }
+
+    async function reconcileEmbeddings() {
+        const data = await callPipelineStep("reconcile embeddings", "/api/etl/v2/reconcile-embeddings");
+        logLine(`reconcile status=${data.status || "submitted"}`);
+        await refreshStatus(true);
+    }
+
+    function metric(label, value) {
+        const div = document.createElement("div");
+        div.className = "metric";
+        const span = document.createElement("span");
+        span.textContent = label;
+        const strong = document.createElement("strong");
+        strong.textContent = value ?? 0;
+        div.appendChild(span);
+        div.appendChild(strong);
+        return div;
+    }
+
+    function renderStatus(data) {
+        const grid = el("statusGrid");
+        grid.innerHTML = "";
+        const documents = data.documents || {};
+        const embeddings = data.embeddings || {};
+        const jobs = data.embeddingJobs || {};
+        const events = data.events || {};
+        [
+            ["Documents", documents.total],
+            ["Completed Docs", documents.completed],
+            ["Failed Docs", documents.failed],
+            ["Chunks", embeddings.chunks],
+            ["Embeddings", embeddings.embeddings],
+            ["Missing Embeddings", embeddings.missingEmbeddings],
+            ["Kafka Events", events.total],
+            ["Failed Events", events.failed],
+            ["Pending Jobs", jobs.pending],
+            ["Failed Jobs", jobs.failed]
+        ].forEach(([label, value]) => grid.appendChild(metric(label, value)));
+
+        renderRows("eventsTable", data.recentEvents || [], [
+            "eventType",
+            "topicName",
+            row => row.documentId ?? "",
+            "processingStatus",
+            "processedAt",
+            "errorMessage"
+        ]);
+    }
+
+    async function refreshStatus(silent = false) {
+        try {
+            const data = await getJson("/api/etl/v2/status");
+            renderStatus(data);
+            if (!silent) {
+                const missing = data.embeddings?.missingEmbeddings ?? 0;
+                const failedEvents = data.events?.failed ?? 0;
+                logLine(`status refreshed: missingEmbeddings=${missing} failedEvents=${failedEvents}`);
+            }
+            return data;
+        } catch (error) {
+            if (!silent) {
+                logLine(`status refresh failed: ${error.message}`, true);
+            }
+            throw error;
+        }
+    }
+
+    async function runPipeline() {
+        setBusy(true);
+        try {
+            await stage();
+            logLine("Kafka pipeline submitted; consumers will continue parse/chunk/embed work asynchronously.");
+        } catch (error) {
+            logLine(`pipeline failed: ${error.message}`, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    function renderPills(containerId, values) {
+        const container = el(containerId);
+        container.innerHTML = "";
+        if (!values || values.length === 0) {
+            container.textContent = "No sources";
+            return;
+        }
+        values.forEach(v => {
+            const span = document.createElement("span");
+            span.className = "pill";
+            span.textContent = `doc:${v}`;
+            container.appendChild(span);
+        });
+    }
+
+    function renderRows(tableId, rows, columns) {
+        const tbody = el(tableId).querySelector("tbody");
+        tbody.innerHTML = "";
+        if (!rows || rows.length === 0) return;
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+            columns.forEach(col => {
+                const td = document.createElement("td");
+                const value = typeof col === "function" ? col(row) : row[col];
+                td.textContent = value ?? "";
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function askReview() {
+        setBusy(true);
+        try {
+            const question = (el("question").value || "").trim();
+            if (!question) {
+                throw new Error("question is required");
+            }
+            const goldenAnswer = (el("goldenAnswer").value || "").trim();
+            const topK = (el("topK").value || "5").trim();
+            const candidateK = (el("candidateK").value || "20").trim();
+            const mmrLambda = (el("mmrLambda").value || "0.7").trim();
+
+            const params = new URLSearchParams({
+                question: question,
+                topK: topK,
+                candidateK: candidateK,
+                mmrLambda: mmrLambda
+            });
+            if (goldenAnswer) {
+                params.append("goldenAnswer", goldenAnswer);
+            }
+
+            const url = `/api/chat/review?${params.toString()}`;
+            logLine(`chat review -> ${url}`);
+            const data = await getJson(url);
+            logLine("chat review completed");
+
+            el("answer").textContent = data.answer || "";
+            renderPills("sources", data.sources || []);
+            el("meta").textContent = `topK=${data.topK}, candidateK=${data.candidateK}, mmrLambda=${data.mmrLambda}`;
+
+            renderRows("evalTable", data.evaluations || [], [
+                "metric",
+                row => Number(row.score ?? 0).toFixed(4),
+                "reasoning"
+            ]);
+            renderRows("vectorTable", data.vectorTopK || [], [
+                "rank",
+                "documentId",
+                row => Number(row.similarity ?? 0).toFixed(4),
+                "snippet"
+            ]);
+            renderRows("mmrTable", data.mmrOutput || [], [
+                "rank",
+                "documentId",
+                row => Number(row.similarity ?? 0).toFixed(4),
+                row => Number(row.mmrScore ?? 0).toFixed(4),
+                row => Number(row.maxSimilarityToSelected ?? 0).toFixed(4),
+                "snippet"
+            ]);
+            renderRows("rerankerTable", data.rerankerOutput || [], [
+                "rank",
+                "documentId",
+                row => Number(row.semanticScore ?? 0).toFixed(4),
+                row => Number(row.lexicalOverlapScore ?? 0).toFixed(4),
+                row => Number(row.exactPhraseBoost ?? 0).toFixed(4),
+                row => Number(row.finalScore ?? 0).toFixed(4),
+                "snippet"
+            ]);
+        } catch (error) {
+            logLine(`chat review failed: ${error.message}`, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    el("runPipelineBtn").addEventListener("click", runPipeline);
+    el("stageBtn").addEventListener("click", async () => {
+        setBusy(true);
+        try { await stage(); } catch (e) { logLine(`stage failed: ${e.message}`, true); } finally { setBusy(false); }
+    });
+    el("reconcileBtn").addEventListener("click", async () => {
+        setBusy(true);
+        try { await reconcileEmbeddings(); } catch (e) { logLine(`reconcile failed: ${e.message}`, true); } finally { setBusy(false); }
+    });
+    el("refreshStatusBtn").addEventListener("click", async () => {
+        try { await refreshStatus(); } catch (e) { /* already logged */ }
+    });
+    el("askBtn").addEventListener("click", askReview);
+
+    refreshStatus(true).catch(() => {});
+    setInterval(() => refreshStatus(true).catch(() => {}), 10000);
+    logLine("UI ready. Start Kafka Pipeline publishes V2 events; use Refresh Status to inspect progress.");
+</script>
+</body>
+</html>

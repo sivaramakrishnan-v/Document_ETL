@@ -1,0 +1,39 @@
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: floci
+    environment:
+      FLOCI_DEFAULT_REGION: ${FLOCI_DEFAULT_REGION:-us-east-1}
+      FLOCI_STORAGE_MODE: ${FLOCI_STORAGE_MODE:-hybrid}
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - floci_data:/app/data
+    restart: unless-stopped
+
+  mlflow_server:
+    build:
+      context: .
+      dockerfile: docker/mlflow/Dockerfile
+    image: documentetl-mlflow:latest
+    container_name: mlflow_server
+    environment:
+      MLFLOW_BACKEND_STORE_URI: ${MLFLOW_BACKEND_STORE_URI}
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: ${MLFLOW_DEFAULT_ARTIFACT_ROOT:-/mlflow/artifacts}
+    command:
+      - sh
+      - -c
+      - >
+        mlflow server --host 0.0.0.0 --port 5000
+        --backend-store-uri "$$MLFLOW_BACKEND_STORE_URI"
+        --default-artifact-root "$$MLFLOW_DEFAULT_ARTIFACT_ROOT"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    restart: unless-stopped
+
+volumes:
+  floci_data:
+  mlflow_artifacts:

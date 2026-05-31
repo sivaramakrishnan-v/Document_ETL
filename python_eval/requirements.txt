@@ -1,0 +1,7 @@
+mlflow
+ragas
+pandas
+google-genai
+google-cloud-aiplatform
+jsonref
+psycopg2-binary
