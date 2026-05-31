@@ -71,7 +71,7 @@ public class ChatReviewService {
                             "question", question
                     ))
                     .text();
-            String answer = generationModelGateway.generate(prompt);
+            String answer = generationModelGateway.generate(prompt, "chat.review.answer");
             List<Long> sources = extractSources(finalChunks);
             List<EvaluationResult> evaluations = evaluationService.evaluateAndLog(question, context, answer, goldenAnswer);
 

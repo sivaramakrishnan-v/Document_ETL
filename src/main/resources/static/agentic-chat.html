@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DocumentETL Agentic Chat</title>
+    <style>
+        :root {
+            --bg: #f3f6fb;
+            --panel: #ffffff;
+            --border: #d9e3f0;
+            --text: #172033;
+            --muted: #607089;
+            --user: #0f766e;
+            --assistant: #ffffff;
+            --assistant-border: #d1dbe8;
+            --accent: #0f766e;
+            --accent-dark: #115e59;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top right, #dcfce7, var(--bg) 46%);
+            color: var(--text);
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 18px;
+            display: grid;
+            gap: 12px;
+            height: 100vh;
+        }
+
+        .header {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .header h1 {
+            margin: 0 0 8px;
+            font-size: 1.25rem;
+        }
+
+        .top-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        label {
+            display: grid;
+            gap: 4px;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            border: 1px solid #c8d5e5;
+            border-radius: 8px;
+            padding: 8px;
+            font: inherit;
+        }
+
+        .chat-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: grid;
+            grid-template-rows: 1fr auto;
+            min-height: 0;
+            overflow: hidden;
+            box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .messages {
+            padding: 14px;
+            overflow: auto;
+            display: grid;
+            gap: 12px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f4f8fd 100%);
+        }
+
+        .msg-row {
+            display: flex;
+        }
+
+        .msg-row.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 78%;
+            border-radius: 12px;
+            padding: 10px 12px;
+            white-space: pre-wrap;
+            line-height: 1.45;
+            box-shadow: 0 2px 8px rgba(2, 6, 23, 0.05);
+            border: 1px solid transparent;
+        }
+
+        .bubble.user {
+            background: var(--user);
+            color: #ffffff;
+        }
+
+        .bubble.assistant {
+            background: var(--assistant);
+            border-color: var(--assistant-border);
+            color: var(--text);
+        }
+
+        .meta {
+            margin-top: 8px;
+            border-top: 1px dashed #d7e0ed;
+            padding-top: 8px;
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: grid;
+            gap: 6px;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: #0f172a;
+            margin: 0 6px 4px 0;
+            font-size: 0.75rem;
+        }
+
+        .composer {
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+            padding: 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .composer textarea {
+            min-height: 84px;
+            resize: vertical;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: 0;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #fff;
+            padding: 8px 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: #334155;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .status {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <section class="header">
+        <h1>DocumentETL Agentic Chat</h1>
+        <div class="top-grid">
+            <label>Thread ID (optional, reuse to continue context)
+                <input id="threadId" type="text" placeholder="session-1">
+            </label>
+        </div>
+    </section>
+
+    <section class="chat-panel">
+        <div id="messages" class="messages"></div>
+        <div class="composer">
+            <label>Message
+                <textarea id="question" placeholder="Ask the agentic RAG assistant..."></textarea>
+            </label>
+            <div class="controls">
+                <button id="sendBtn">Send</button>
+                <button id="clearBtn" class="secondary">Clear Chat</button>
+                <span id="status" class="status"></span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const el = (id) => document.getElementById(id);
+
+    function setBusy(isBusy) {
+        el("sendBtn").disabled = isBusy;
+        el("status").textContent = isBusy ? "Thinking..." : "";
+    }
+
+    function appendMessage(role, text, meta = null) {
+        const row = document.createElement("div");
+        row.className = `msg-row ${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${role === "user" ? "user" : "assistant"}`;
+        bubble.textContent = text || "";
+
+        if (role === "assistant" && meta) {
+            const metaDiv = document.createElement("div");
+            metaDiv.className = "meta";
+
+            const line1 = document.createElement("div");
+            line1.textContent =
+                `threadId=${meta.threadId || ""} | grade=${meta.contextGrade || ""} | validate=${meta.validationOutcome || ""}`;
+            metaDiv.appendChild(line1);
+
+            const line2 = document.createElement("div");
+            line2.textContent =
+                `retrievalAttempts=${meta.retrievalAttempts ?? 0}, rewriteAttempts=${meta.rewriteAttempts ?? 0}, answerRevisions=${meta.answerRevisionAttempts ?? 0}`;
+            metaDiv.appendChild(line2);
+
+            if (meta.citations && meta.citations.length) {
+                const citationsDiv = document.createElement("div");
+                meta.citations.forEach(c => {
+                    const span = document.createElement("span");
+                    span.className = "pill";
+                    span.textContent = c;
+                    citationsDiv.appendChild(span);
+                });
+                metaDiv.appendChild(citationsDiv);
+            }
+
+            if (meta.visited && meta.visited.length) {
+                const route = document.createElement("div");
+                route.textContent = `visited: ${meta.visited.join(" -> ")}`;
+                metaDiv.appendChild(route);
+            }
+
+            bubble.appendChild(metaDiv);
+        }
+
+        row.appendChild(bubble);
+        el("messages").appendChild(row);
+        el("messages").scrollTop = el("messages").scrollHeight;
+    }
+
+    async function getJson(url) {
+        const response = await fetch(url, { method: "GET" });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`HTTP ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+
+    async function sendMessage() {
+        const question = (el("question").value || "").trim();
+        if (!question) return;
+
+        const threadId = (el("threadId").value || "").trim();
+        appendMessage("user", question);
+        el("question").value = "";
+        setBusy(true);
+
+        try {
+            const params = new URLSearchParams({ question });
+            if (threadId) {
+                params.append("threadId", threadId);
+            }
+            const data = await getJson(`/api/chat/agent/ask?${params.toString()}`);
+            if (!threadId && data.threadId) {
+                el("threadId").value = data.threadId;
+            }
+            appendMessage("assistant", data.answer || "", data);
+        } catch (error) {
+            appendMessage("assistant", `Error: ${error.message}`);
+        } finally {
+            setBusy(false);
+            el("question").focus();
+        }
+    }
+
+    function clearChat() {
+        el("messages").innerHTML = "";
+        appendMessage("assistant", "Agentic chat ready. Ask your question.");
+    }
+
+    el("sendBtn").addEventListener("click", sendMessage);
+    el("clearBtn").addEventListener("click", clearChat);
+    el("question").addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+
+    clearChat();
+</script>
+</body>
+</html>
+

@@ -174,6 +174,17 @@
             padding: 2px 8px;
             margin-right: 6px;
         }
+
+        .compare-meta {
+            font-family: "Consolas", monospace;
+            font-size: 0.82rem;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -230,7 +241,33 @@
         </div>
         <div class="controls">
             <button id="askBtn">Ask + Review</button>
+            <button class="secondary" id="compareBtn">Compare Classic vs Agentic</button>
             <span id="meta" class="tiny"></span>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Classic vs Agentic (Side-by-Side)</h2>
+        <div class="fields">
+            <label>Agent Thread ID (optional)
+                <input id="agentThreadId" type="text" placeholder="conversation-1">
+            </label>
+        </div>
+        <div class="grid-2">
+            <div>
+                <h2>Classic `/api/chat/ask`</h2>
+                <div id="classicAnswer" class="answer"></div>
+                <div class="tiny" style="margin-top:8px;">Sources</div>
+                <div id="classicSources"></div>
+                <div class="compare-meta" id="classicMeta"></div>
+            </div>
+            <div>
+                <h2>Agentic `/api/chat/agent/ask`</h2>
+                <div id="agenticAnswer" class="answer"></div>
+                <div class="tiny" style="margin-top:8px;">Citations</div>
+                <div id="agenticSources"></div>
+                <div class="compare-meta" id="agenticMeta"></div>
+            </div>
         </div>
     </section>
 
@@ -342,7 +379,7 @@
     }
 
     function setBusy(isBusy) {
-        ["runPipelineBtn", "stageBtn", "reconcileBtn", "askBtn"].forEach(id => {
+        ["runPipelineBtn", "stageBtn", "reconcileBtn", "askBtn", "compareBtn"].forEach(id => {
             el(id).disabled = isBusy;
         });
     }
@@ -528,6 +565,78 @@
         }
     }
 
+    async function askClassic(question, goldenAnswer) {
+        const params = new URLSearchParams({ question });
+        if (goldenAnswer) {
+            params.append("goldenAnswer", goldenAnswer);
+        }
+        const url = `/api/chat/ask?${params.toString()}`;
+        return getJson(url);
+    }
+
+    async function askAgentic(question, threadId) {
+        const params = new URLSearchParams({ question });
+        if (threadId) {
+            params.append("threadId", threadId);
+        }
+        const url = `/api/chat/agent/ask?${params.toString()}`;
+        return getJson(url);
+    }
+
+    function renderAgenticPills(values) {
+        const container = el("agenticSources");
+        container.innerHTML = "";
+        if (!values || values.length === 0) {
+            container.textContent = "No citations";
+            return;
+        }
+        values.forEach(v => {
+            const span = document.createElement("span");
+            span.className = "pill";
+            span.textContent = v;
+            container.appendChild(span);
+        });
+    }
+
+    async function compareClassicVsAgentic() {
+        setBusy(true);
+        try {
+            const question = (el("question").value || "").trim();
+            if (!question) {
+                throw new Error("question is required");
+            }
+            const goldenAnswer = (el("goldenAnswer").value || "").trim();
+            const threadId = (el("agentThreadId").value || "").trim();
+
+            logLine("compare -> classic + agentic calls started");
+            const [classic, agentic] = await Promise.all([
+                askClassic(question, goldenAnswer),
+                askAgentic(question, threadId)
+            ]);
+            logLine("compare -> both calls completed");
+
+            el("classicAnswer").textContent = classic.answer || "";
+            renderPills("classicSources", classic.sources || []);
+            el("classicMeta").textContent =
+                `evaluations=${(classic.evaluations || []).length}`;
+
+            el("agenticAnswer").textContent = agentic.answer || "";
+            renderAgenticPills(agentic.citations || []);
+            el("agenticMeta").textContent =
+                `threadId=${agentic.threadId || ""}\n` +
+                `contextGrade=${agentic.contextGrade || ""}\n` +
+                `validationOutcome=${agentic.validationOutcome || ""}\n` +
+                `retrievalAttempts=${agentic.retrievalAttempts ?? 0}\n` +
+                `rewriteAttempts=${agentic.rewriteAttempts ?? 0}\n` +
+                `answerRevisionAttempts=${agentic.answerRevisionAttempts ?? 0}\n` +
+                `visited=${(agentic.visited || []).join(" -> ")}`;
+        } catch (error) {
+            logLine(`compare failed: ${error.message}`, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
     el("runPipelineBtn").addEventListener("click", runPipeline);
     el("stageBtn").addEventListener("click", async () => {
         setBusy(true);
@@ -541,6 +650,7 @@
         try { await refreshStatus(); } catch (e) { /* already logged */ }
     });
     el("askBtn").addEventListener("click", askReview);
+    el("compareBtn").addEventListener("click", compareClassicVsAgentic);
 
     refreshStatus(true).catch(() => {});
     setInterval(() => refreshStatus(true).catch(() => {}), 10000);

@@ -1,5 +1,6 @@
 package com.document.documentetl.controller;
 
+import com.document.documentetl.dto.AgenticAskResponse;
 import com.document.documentetl.dto.ChatAskRequest;
 import com.document.documentetl.dto.ChatAskResponse;
 import com.document.documentetl.dto.ChatReviewResponse;
@@ -11,6 +12,7 @@ import com.document.documentetl.dto.SearchResult;
 import com.document.documentetl.service.ChatReviewService;
 import com.document.documentetl.service.ChatReviewService.ChatReviewAnswer;
 import com.document.documentetl.service.ChatService;
+import com.document.documentetl.service.AgenticRagService;
 import com.document.documentetl.service.RerankerRetrievalService.RerankerScoreDetail;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +34,14 @@ public class ChatController {
 
     private final ChatService chatService;
     private final ChatReviewService chatReviewService;
+    private final AgenticRagService agenticRagService;
 
-    public ChatController(ChatService chatService, ChatReviewService chatReviewService) {
+    public ChatController(ChatService chatService,
+                          ChatReviewService chatReviewService,
+                          AgenticRagService agenticRagService) {
         this.chatService = chatService;
         this.chatReviewService = chatReviewService;
+        this.agenticRagService = agenticRagService;
     }
 
     @PostMapping("/ask")
@@ -88,6 +94,30 @@ public class ChatController {
     public ResponseEntity<Void> chatUi() {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create("/chat-review.html"))
+                .build();
+    }
+
+    @PostMapping("/agent/ask")
+    public AgenticAskResponse askAgent(@RequestBody ChatAskRequest request,
+                                       @RequestParam(name = "threadId", required = false) String threadId) {
+        String question = request != null ? request.getQuestion() : null;
+        validateQuestionOrThrow(question);
+        return agenticRagService.ask(question, threadId);
+    }
+
+    @GetMapping("/agent/ask")
+    public AgenticAskResponse askAgentGet(@RequestParam(name = "question", required = false) String question,
+                                          @RequestParam(name = "q", required = false) String q,
+                                          @RequestParam(name = "threadId", required = false) String threadId) {
+        String resolvedQuestion = resolveQuestion(question, q);
+        validateQuestionOrThrow(resolvedQuestion);
+        return agenticRagService.ask(resolvedQuestion, threadId);
+    }
+
+    @GetMapping("/agent/ui")
+    public ResponseEntity<Void> agenticUi() {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create("/agentic-chat.html"))
                 .build();
     }
 

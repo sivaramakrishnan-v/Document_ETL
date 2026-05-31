@@ -49,3 +49,27 @@ ON knowledge.parsed_content (document_id, content_hash);
 
 CREATE INDEX IF NOT EXISTS idx_chunks_version
 ON knowledge.document_chunks (document_id, content_hash);
+
+CREATE TABLE IF NOT EXISTS knowledge.token_usage_events (
+    id BIGSERIAL PRIMARY KEY,
+    operation_name VARCHAR(128) NOT NULL,
+    model_name VARCHAR(128) NOT NULL,
+    prompt_chars INTEGER NOT NULL,
+    completion_chars INTEGER NOT NULL DEFAULT 0,
+    prompt_tokens INTEGER NOT NULL,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'SUCCESS',
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_token_usage_status CHECK (status IN ('SUCCESS', 'FAILED'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_created_at
+ON knowledge.token_usage_events (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_operation
+ON knowledge.token_usage_events (operation_name);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_status
+ON knowledge.token_usage_events (status);

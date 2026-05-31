@@ -58,7 +58,7 @@ public class ChatService {
                     ))
                     .text();
 
-            String answer = generationModelGateway.generate(prompt);
+            String answer = generationModelGateway.generate(prompt, "chat.answer");
             List<Long> sources = extractSources(topChunks);
             List<EvaluationResult> evaluations = evaluationService.evaluateAndLog(question, context, answer, goldenAnswer);
             long durationMs = (System.nanoTime() - startedAtNanos) / 1_000_000;

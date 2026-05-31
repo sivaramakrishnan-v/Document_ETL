@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DocumentETL Token Manager</title>
+    <style>
+        :root {
+            --bg: #f4f6fb;
+            --panel: #ffffff;
+            --border: #dbe3ef;
+            --text: #0f172a;
+            --muted: #64748b;
+            --accent: #1d4ed8;
+            --accent-dark: #1e40af;
+            --danger: #b91c1c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            color: var(--text);
+            background: radial-gradient(circle at top right, #dbeafe, var(--bg) 45%);
+        }
+
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 18px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        }
+
+        h1, h2 {
+            margin: 0 0 10px;
+        }
+
+        h1 { font-size: 1.4rem; }
+        h2 { font-size: 1.05rem; color: #1e3a8a; }
+
+        .tiny { color: var(--muted); font-size: 0.86rem; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        label {
+            display: grid;
+            gap: 4px;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        input {
+            border: 1px solid #c8d3e1;
+            border-radius: 8px;
+            padding: 8px;
+            font: inherit;
+            min-width: 160px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            padding: 8px 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #dc2626, var(--danger));
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .metrics {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .metric {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        .metric .label {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .metric .value {
+            margin-top: 4px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        th, td {
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 6px;
+            vertical-align: top;
+        }
+
+        th {
+            color: #1e293b;
+            background: #f8fafc;
+        }
+
+        .grid-2 {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+
+        .status {
+            color: var(--muted);
+            font-size: 0.84rem;
+            min-height: 18px;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="panel">
+        <h1>DocumentETL Token Manager</h1>
+        <p class="tiny">Tracks generation token usage across classic and agentic RAG flows.</p>
+        <div class="controls">
+            <button id="refreshBtn">Refresh</button>
+            <label>Event limit
+                <input id="eventLimit" type="number" min="1" max="500" value="100">
+            </label>
+            <label>Prune Before (UTC datetime)
+                <input id="pruneBefore" type="datetime-local">
+            </label>
+            <button id="pruneBtn" class="danger">Prune Before</button>
+            <button id="clearBtn" class="danger">Clear All</button>
+        </div>
+        <div id="status" class="status"></div>
+    </section>
+
+    <section class="panel">
+        <h2>Summary</h2>
+        <div id="summaryMetrics" class="metrics"></div>
+        <div id="summaryWindow" class="tiny" style="margin-top:10px;"></div>
+    </section>
+
+    <section class="panel grid-2">
+        <div>
+            <h2>Top Operations</h2>
+            <table id="operationsTable">
+                <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>Requests</th>
+                    <th>Prompt</th>
+                    <th>Completion</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div>
+            <h2>Recent Events</h2>
+            <table id="eventsTable">
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Operation</th>
+                    <th>Model</th>
+                    <th>Status</th>
+                    <th>Prompt</th>
+                    <th>Completion</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    const el = (id) => document.getElementById(id);
+
+    function setStatus(message, isError = false) {
+        const node = el("status");
+        node.textContent = message || "";
+        node.style.color = isError ? "#b91c1c" : "#64748b";
+    }
+
+    function setBusy(isBusy) {
+        ["refreshBtn", "pruneBtn", "clearBtn"].forEach(id => el(id).disabled = isBusy);
+    }
+
+    function metric(label, value) {
+        const div = document.createElement("div");
+        div.className = "metric";
+        const l = document.createElement("div");
+        l.className = "label";
+        l.textContent = label;
+        const v = document.createElement("div");
+        v.className = "value";
+        v.textContent = value;
+        div.appendChild(l);
+        div.appendChild(v);
+        return div;
+    }
+
+    async function getJson(url) {
+        const response = await fetch(url, { method: "GET" });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`HTTP ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+
+    async function callDelete(url) {
+        const response = await fetch(url, { method: "DELETE" });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`HTTP ${response.status}: ${text}`);
+        }
+        return response.json();
+    }
+
+    function renderSummary(data) {
+        const grid = el("summaryMetrics");
+        grid.innerHTML = "";
+        grid.appendChild(metric("Requests", data.requestCount ?? 0));
+        grid.appendChild(metric("Prompt Tokens", data.promptTokens ?? 0));
+        grid.appendChild(metric("Completion Tokens", data.completionTokens ?? 0));
+        grid.appendChild(metric("Total Tokens", data.totalTokens ?? 0));
+        grid.appendChild(metric("Success", data.successCount ?? 0));
+        grid.appendChild(metric("Failures", data.failureCount ?? 0));
+        grid.appendChild(metric("Failure %", Number(data.failureRatePct ?? 0).toFixed(2)));
+
+        const first = data.firstSeenAt || "-";
+        const last = data.lastSeenAt || "-";
+        el("summaryWindow").textContent = `Window: first=${first} | last=${last}`;
+
+        const opsBody = el("operationsTable").querySelector("tbody");
+        opsBody.innerHTML = "";
+        (data.topOperations || []).forEach(op => {
+            const tr = document.createElement("tr");
+            [
+                op.operationName,
+                op.requestCount,
+                op.promptTokens,
+                op.completionTokens,
+                op.totalTokens
+            ].forEach(value => {
+                const td = document.createElement("td");
+                td.textContent = value ?? "";
+                tr.appendChild(td);
+            });
+            opsBody.appendChild(tr);
+        });
+    }
+
+    function renderEvents(events) {
+        const body = el("eventsTable").querySelector("tbody");
+        body.innerHTML = "";
+        (events || []).forEach(event => {
+            const tr = document.createElement("tr");
+            const status = event.status === "FAILED" && event.errorMessage
+                ? `${event.status}: ${event.errorMessage}`
+                : event.status;
+            [
+                event.createdAt,
+                event.operationName,
+                event.modelName,
+                status,
+                event.promptTokens,
+                event.completionTokens,
+                event.totalTokens
+            ].forEach(value => {
+                const td = document.createElement("td");
+                td.textContent = value ?? "";
+                tr.appendChild(td);
+            });
+            body.appendChild(tr);
+        });
+    }
+
+    async function refresh() {
+        setBusy(true);
+        setStatus("Refreshing...");
+        try {
+            const limit = Math.max(1, Math.min(500, Number(el("eventLimit").value || 100)));
+            const [summary, events] = await Promise.all([
+                getJson("/api/tokens/summary?topOperations=10"),
+                getJson(`/api/tokens/events?limit=${limit}`)
+            ]);
+            renderSummary(summary);
+            renderEvents(events);
+            setStatus(`Loaded ${events.length} events.`);
+        } catch (error) {
+            setStatus(error.message, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function clearAll() {
+        if (!confirm("Delete all token usage events?")) {
+            return;
+        }
+        setBusy(true);
+        setStatus("Clearing token usage history...");
+        try {
+            const result = await callDelete("/api/tokens/events");
+            setStatus(`Deleted ${result.deleted ?? 0} events.`);
+            await refresh();
+        } catch (error) {
+            setStatus(error.message, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function pruneBefore() {
+        const value = el("pruneBefore").value;
+        if (!value) {
+            setStatus("Select a prune timestamp first.", true);
+            return;
+        }
+        const iso = new Date(value).toISOString();
+        setBusy(true);
+        setStatus("Pruning token usage history...");
+        try {
+            const result = await callDelete(`/api/tokens/events/before?before=${encodeURIComponent(iso)}`);
+            setStatus(`Pruned ${result.deleted ?? 0} events before ${result.before}.`);
+            await refresh();
+        } catch (error) {
+            setStatus(error.message, true);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    el("refreshBtn").addEventListener("click", refresh);
+    el("clearBtn").addEventListener("click", clearAll);
+    el("pruneBtn").addEventListener("click", pruneBefore);
+
+    refresh();
+</script>
+</body>
+</html>

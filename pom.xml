@@ -16,6 +16,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <langgraph4j.version>1.8.17</langgraph4j.version>
+        <async.generator.version>4.3.1</async.generator.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -111,6 +113,16 @@
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>
             <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bsc.langgraph4j</groupId>
+            <artifactId>langgraph4j-core</artifactId>
+            <version>${langgraph4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bsc.async</groupId>
+            <artifactId>async-generator</artifactId>
+            <version>${async.generator.version}</version>
         </dependency>
 
     </dependencies>
