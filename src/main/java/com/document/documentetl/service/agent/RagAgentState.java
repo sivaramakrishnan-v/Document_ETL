@@ -12,6 +12,7 @@ import java.util.Optional;
 public class RagAgentState extends AgentState {
 
     public static final String THREAD_ID = "threadId";
+    public static final String CHECKPOINT_ID = "checkpointId";
     public static final String USER_QUERY = "userQuery";
     public static final String NORMALIZED_QUERY = "normalizedQuery";
     public static final String REWRITTEN_QUERY = "rewrittenQuery";
@@ -31,6 +32,7 @@ public class RagAgentState extends AgentState {
 
     public static final Map<String, Channel<?>> SCHEMA = Map.ofEntries(
             Map.entry(THREAD_ID, Channels.base(() -> "")),
+            Map.entry(CHECKPOINT_ID, Channels.base(() -> "")),
             Map.entry(USER_QUERY, Channels.base(() -> "")),
             Map.entry(NORMALIZED_QUERY, Channels.base(() -> "")),
             Map.entry(REWRITTEN_QUERY, Channels.base(() -> "")),
@@ -59,6 +61,10 @@ public class RagAgentState extends AgentState {
 
     public Optional<String> threadId() {
         return this.value(THREAD_ID);
+    }
+
+    public Optional<String> checkpointId() {
+        return this.value(CHECKPOINT_ID);
     }
 
     public Optional<String> normalizedQuery() {

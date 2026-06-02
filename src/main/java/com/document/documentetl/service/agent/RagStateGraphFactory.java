@@ -3,6 +3,7 @@ package com.document.documentetl.service.agent;
 import com.document.documentetl.dto.SearchResult;
 import com.document.documentetl.service.GenerationModelGateway;
 import com.document.documentetl.service.MlflowActionTrackingService;
+import com.document.documentetl.service.RagWorkflowCheckpointService;
 import com.document.documentetl.service.agent.retrieval.FinishRetrievalTool;
 import com.document.documentetl.service.agent.retrieval.RetrievalTool;
 import com.document.documentetl.service.agent.retrieval.RetrievalToolRegistry;
@@ -11,6 +12,8 @@ import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
 import org.bsc.langgraph4j.action.EdgeAction;
 import org.bsc.langgraph4j.action.NodeAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -20,6 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.bsc.langgraph4j.StateGraph.END;
 import static org.bsc.langgraph4j.StateGraph.START;
@@ -28,6 +33,9 @@ import static org.bsc.langgraph4j.action.AsyncNodeAction.node_async;
 
 @Component
 public class RagStateGraphFactory {
+    private static final Logger log = LoggerFactory.getLogger(RagStateGraphFactory.class);
+    private static final Pattern DOC_ID_PATTERN = Pattern.compile("doc=(\\d+)");
+    private static final Pattern CHUNK_ID_PATTERN = Pattern.compile("chunk=([^\\s]+)");
 
     private static final String NODE_NORMALIZE_QUERY = "normalize_query";
     private static final String NODE_QUERY_PLANNER = "query_planner";
@@ -53,15 +61,18 @@ public class RagStateGraphFactory {
     private final FinishRetrievalTool finishRetrievalTool;
     private final GenerationModelGateway generationModelGateway;
     private final MlflowActionTrackingService mlflowActionTrackingService;
+    private final RagWorkflowCheckpointService checkpointService;
 
     public RagStateGraphFactory(RetrievalToolRegistry retrievalToolRegistry,
                                 FinishRetrievalTool finishRetrievalTool,
                                 GenerationModelGateway generationModelGateway,
-                                MlflowActionTrackingService mlflowActionTrackingService) {
+                                MlflowActionTrackingService mlflowActionTrackingService,
+                                RagWorkflowCheckpointService checkpointService) {
         this.retrievalToolRegistry = retrievalToolRegistry;
         this.finishRetrievalTool = finishRetrievalTool;
         this.generationModelGateway = generationModelGateway;
         this.mlflowActionTrackingService = mlflowActionTrackingService;
+        this.checkpointService = checkpointService;
     }
 
     public CompiledGraph<RagAgentState> build() throws GraphStateException {
@@ -110,12 +121,17 @@ public class RagStateGraphFactory {
                 .compile();
     }
 
-    private static class NormalizeQueryNode implements NodeAction<RagAgentState> {
+    private class NormalizeQueryNode implements NodeAction<RagAgentState> {
         @Override
         public Map<String, Object> apply(RagAgentState state) {
             String query = state.userQuery().orElse("");
             String normalized = query.trim().replaceAll("\\s+", " ");
             String existingThreadId = state.threadId().orElse("");
+            String rewritten = state.rewrittenQuery().orElse("");
+            safeCheckpointUpdate(
+                    state,
+                    checkpointId -> checkpointService.markPlanningCompleted(checkpointId, normalized, rewritten)
+            );
 
             return Map.of(
                     RagAgentState.THREAD_ID, existingThreadId.isBlank() ? UUID.randomUUID().toString() : existingThreadId,
@@ -217,6 +233,15 @@ public class RagStateGraphFactory {
                 evidence.add(toEvidence(result));
             }
 
+            String strategy = "tools:" + String.join(",", plannedTools);
+            safeCheckpointUpdate(state, checkpointId -> checkpointService.markRetrievalCompleted(
+                    checkpointId,
+                    strategy,
+                    extractDocumentIds(evidence),
+                    extractChunkIds(evidence),
+                    evidence
+            ));
+
             return Map.of(
                     RagAgentState.RETRIEVAL_ATTEMPTS, attempts,
                     RagAgentState.RETRIEVED_CHUNKS, evidence,
@@ -265,8 +290,12 @@ public class RagStateGraphFactory {
                         String.join("\n", evidence)
                 );
                 grade = normalizeRoute(safeGenerate(prompt, "agent.context_grader"), ROUTE_RETRY);
-                if (ROUTE_RETRY.equals(grade) && attempts >= MAX_RETRIEVAL_ATTEMPTS) {
-                    grade = ROUTE_NO_EVIDENCE;
+                // Only allow NO_EVIDENCE when we actually have zero evidence.
+                // If evidence exists, keep iterating until max attempts, then answer with available context.
+                if (ROUTE_NO_EVIDENCE.equals(grade)) {
+                    grade = attempts >= MAX_RETRIEVAL_ATTEMPTS ? ROUTE_SUFFICIENT : ROUTE_RETRY;
+                } else if (ROUTE_RETRY.equals(grade) && attempts >= MAX_RETRIEVAL_ATTEMPTS) {
+                    grade = ROUTE_SUFFICIENT;
                 }
             }
 
@@ -293,6 +322,12 @@ public class RagStateGraphFactory {
             if (rewritten.isBlank()) {
                 rewritten = state.normalizedQuery().orElse("") + " include definitions, constraints, and exceptions";
             }
+            String normalized = state.normalizedQuery().orElse("");
+            String rewrittenSnapshot = rewritten;
+            safeCheckpointUpdate(
+                    state,
+                    checkpointId -> checkpointService.markPlanningCompleted(checkpointId, normalized, rewrittenSnapshot)
+            );
 
             return Map.of(
                     RagAgentState.REWRITE_ATTEMPTS, rewriteAttempts,
@@ -323,10 +358,13 @@ public class RagStateGraphFactory {
             if (answer.isBlank()) {
                 answer = "I do not have enough evidence in the indexed documents to answer this confidently.";
             }
+            String answerSnapshot = answer;
+            List<String> citations = extractCitations(state.selectedEvidence());
+            safeCheckpointUpdate(state, checkpointId -> checkpointService.markAnswerGenerated(checkpointId, answerSnapshot, citations));
 
             return Map.of(
                     RagAgentState.FINAL_ANSWER, answer,
-                    RagAgentState.CITATIONS, extractCitations(state.selectedEvidence()),
+                    RagAgentState.CITATIONS, citations,
                     RagAgentState.VISITED, NODE_ANSWER_GENERATOR,
                     RagAgentState.FEEDBACK, "Answer generator produced a draft answer."
             );
@@ -355,6 +393,7 @@ public class RagStateGraphFactory {
             );
             String outcome = normalizeRoute(safeGenerate(prompt, "agent.answer_validator"), ROUTE_REVISE);
             int revisions = state.answerRevisionAttempts();
+            safeCheckpointUpdate(state, checkpointId -> checkpointService.markValidationCompleted(checkpointId, outcome));
 
             return Map.of(
                     RagAgentState.VALIDATION_OUTCOME, outcome,
@@ -398,6 +437,7 @@ public class RagStateGraphFactory {
                     metrics,
                     params
             );
+            safeCheckpointUpdate(state, checkpointService::markCompleted);
 
             return Map.of(
                     RagAgentState.VISITED, NODE_PERSIST_TRACE,
@@ -504,5 +544,39 @@ public class RagStateGraphFactory {
             citations.add("[" + token + "]");
         }
         return citations.stream().distinct().toList();
+    }
+
+    private static List<Long> extractDocumentIds(List<String> evidence) {
+        List<Long> documentIds = new ArrayList<>();
+        for (String entry : evidence) {
+            Matcher matcher = DOC_ID_PATTERN.matcher(entry);
+            if (matcher.find()) {
+                documentIds.add(Long.parseLong(matcher.group(1)));
+            }
+        }
+        return documentIds.stream().distinct().toList();
+    }
+
+    private static List<String> extractChunkIds(List<String> evidence) {
+        List<String> chunkIds = new ArrayList<>();
+        for (String entry : evidence) {
+            Matcher matcher = CHUNK_ID_PATTERN.matcher(entry);
+            if (matcher.find()) {
+                chunkIds.add(matcher.group(1));
+            }
+        }
+        return chunkIds.stream().distinct().toList();
+    }
+
+    private void safeCheckpointUpdate(RagAgentState state, java.util.function.Consumer<UUID> updater) {
+        String checkpointIdRaw = state.checkpointId().orElse("");
+        if (checkpointIdRaw.isBlank()) {
+            return;
+        }
+        try {
+            updater.accept(UUID.fromString(checkpointIdRaw));
+        } catch (Exception ex) {
+            log.warn("Checkpoint update failed for checkpointId={}: {}", checkpointIdRaw, ex.getMessage());
+        }
     }
 }

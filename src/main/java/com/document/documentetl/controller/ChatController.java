@@ -101,8 +101,11 @@ public class ChatController {
     public AgenticAskResponse askAgent(@RequestBody ChatAskRequest request,
                                        @RequestParam(name = "threadId", required = false) String threadId) {
         String question = request != null ? request.getQuestion() : null;
+        String resolvedThreadId = (threadId != null && !threadId.isBlank())
+                ? threadId
+                : (request != null ? request.getThreadId() : null);
         validateQuestionOrThrow(question);
-        return agenticRagService.ask(question, threadId);
+        return agenticRagService.ask(question, resolvedThreadId);
     }
 
     @GetMapping("/agent/ask")

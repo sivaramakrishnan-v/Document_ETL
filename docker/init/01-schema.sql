@@ -52,6 +52,7 @@ ON knowledge.document_chunks (document_id, content_hash);
 
 CREATE TABLE IF NOT EXISTS knowledge.token_usage_events (
     id BIGSERIAL PRIMARY KEY,
+    run_id VARCHAR(100),
     operation_name VARCHAR(128) NOT NULL,
     model_name VARCHAR(128) NOT NULL,
     prompt_chars INTEGER NOT NULL,
@@ -65,6 +66,9 @@ CREATE TABLE IF NOT EXISTS knowledge.token_usage_events (
     CONSTRAINT chk_token_usage_status CHECK (status IN ('SUCCESS', 'FAILED'))
 );
 
+ALTER TABLE knowledge.token_usage_events
+ADD COLUMN IF NOT EXISTS run_id VARCHAR(100);
+
 CREATE INDEX IF NOT EXISTS idx_token_usage_created_at
 ON knowledge.token_usage_events (created_at DESC);
 
@@ -73,3 +77,42 @@ ON knowledge.token_usage_events (operation_name);
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_status
 ON knowledge.token_usage_events (status);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_run_id
+ON knowledge.token_usage_events (run_id);
+
+CREATE TABLE IF NOT EXISTS knowledge.rag_workflow_checkpoint (
+    checkpoint_id UUID PRIMARY KEY,
+    thread_id VARCHAR(100) NOT NULL,
+    checkpoint_namespace VARCHAR(100) NOT NULL DEFAULT 'default',
+    user_query TEXT,
+    normalized_query TEXT,
+    rewritten_query TEXT,
+    retrieval_strategy VARCHAR(100),
+    retrieved_document_ids JSONB,
+    retrieved_chunk_ids JSONB,
+    retrieved_context_snapshot JSONB,
+    generated_answer TEXT,
+    citations JSONB,
+    validation_status VARCHAR(50),
+    groundedness_score NUMERIC(5,4),
+    citation_coverage_score NUMERIC(5,4),
+    unsupported_claims_count INTEGER,
+    grounding_status VARCHAR(50),
+    workflow_status VARCHAR(50),
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE knowledge.rag_workflow_checkpoint
+ADD COLUMN IF NOT EXISTS groundedness_score NUMERIC(5,4),
+ADD COLUMN IF NOT EXISTS citation_coverage_score NUMERIC(5,4),
+ADD COLUMN IF NOT EXISTS unsupported_claims_count INTEGER,
+ADD COLUMN IF NOT EXISTS grounding_status VARCHAR(50);
+
+CREATE INDEX IF NOT EXISTS idx_rag_checkpoint_thread_id
+ON knowledge.rag_workflow_checkpoint(thread_id);
+
+CREATE INDEX IF NOT EXISTS idx_rag_checkpoint_thread_created
+ON knowledge.rag_workflow_checkpoint(thread_id, created_at DESC);

@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 public class TokenUsageEventResponse {
 
     private Long id;
+    private String runId;
     private String operationName;
     private String modelName;
     private int promptChars;
@@ -20,6 +21,7 @@ public class TokenUsageEventResponse {
     }
 
     public TokenUsageEventResponse(Long id,
+                                   String runId,
                                    String operationName,
                                    String modelName,
                                    int promptChars,
@@ -31,6 +33,7 @@ public class TokenUsageEventResponse {
                                    String errorMessage,
                                    OffsetDateTime createdAt) {
         this.id = id;
+        this.runId = runId;
         this.operationName = operationName;
         this.modelName = modelName;
         this.promptChars = promptChars;
@@ -49,6 +52,14 @@ public class TokenUsageEventResponse {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getRunId() {
+        return runId;
+    }
+
+    public void setRunId(String runId) {
+        this.runId = runId;
     }
 
     public String getOperationName() {

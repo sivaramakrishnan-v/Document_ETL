@@ -5,7 +5,10 @@ import java.util.List;
 public class AgenticAskResponse {
 
     private String threadId;
+    private String checkpointId;
     private String answer;
+    private String validationStatus;
+    private String workflowStatus;
     private String contextGrade;
     private String validationOutcome;
     private int retrievalAttempts;
@@ -14,12 +17,19 @@ public class AgenticAskResponse {
     private List<String> citations;
     private List<String> visited;
     private List<String> feedback;
+    private Double groundednessScore;
+    private Double citationCoverageScore;
+    private Integer unsupportedClaimsCount;
+    private String groundingStatus;
 
     public AgenticAskResponse() {
     }
 
     public AgenticAskResponse(String threadId,
+                              String checkpointId,
                               String answer,
+                              String validationStatus,
+                              String workflowStatus,
                               String contextGrade,
                               String validationOutcome,
                               int retrievalAttempts,
@@ -27,9 +37,16 @@ public class AgenticAskResponse {
                               int answerRevisionAttempts,
                               List<String> citations,
                               List<String> visited,
-                              List<String> feedback) {
+                              List<String> feedback,
+                              Double groundednessScore,
+                              Double citationCoverageScore,
+                              Integer unsupportedClaimsCount,
+                              String groundingStatus) {
         this.threadId = threadId;
+        this.checkpointId = checkpointId;
         this.answer = answer;
+        this.validationStatus = validationStatus;
+        this.workflowStatus = workflowStatus;
         this.contextGrade = contextGrade;
         this.validationOutcome = validationOutcome;
         this.retrievalAttempts = retrievalAttempts;
@@ -38,6 +55,10 @@ public class AgenticAskResponse {
         this.citations = citations;
         this.visited = visited;
         this.feedback = feedback;
+        this.groundednessScore = groundednessScore;
+        this.citationCoverageScore = citationCoverageScore;
+        this.unsupportedClaimsCount = unsupportedClaimsCount;
+        this.groundingStatus = groundingStatus;
     }
 
     public String getThreadId() {
@@ -48,12 +69,36 @@ public class AgenticAskResponse {
         this.threadId = threadId;
     }
 
+    public String getCheckpointId() {
+        return checkpointId;
+    }
+
+    public void setCheckpointId(String checkpointId) {
+        this.checkpointId = checkpointId;
+    }
+
     public String getAnswer() {
         return answer;
     }
 
     public void setAnswer(String answer) {
         this.answer = answer;
+    }
+
+    public String getValidationStatus() {
+        return validationStatus;
+    }
+
+    public void setValidationStatus(String validationStatus) {
+        this.validationStatus = validationStatus;
+    }
+
+    public String getWorkflowStatus() {
+        return workflowStatus;
+    }
+
+    public void setWorkflowStatus(String workflowStatus) {
+        this.workflowStatus = workflowStatus;
     }
 
     public String getContextGrade() {
@@ -119,5 +164,36 @@ public class AgenticAskResponse {
     public void setFeedback(List<String> feedback) {
         this.feedback = feedback;
     }
-}
 
+    public Double getGroundednessScore() {
+        return groundednessScore;
+    }
+
+    public void setGroundednessScore(Double groundednessScore) {
+        this.groundednessScore = groundednessScore;
+    }
+
+    public Double getCitationCoverageScore() {
+        return citationCoverageScore;
+    }
+
+    public void setCitationCoverageScore(Double citationCoverageScore) {
+        this.citationCoverageScore = citationCoverageScore;
+    }
+
+    public Integer getUnsupportedClaimsCount() {
+        return unsupportedClaimsCount;
+    }
+
+    public void setUnsupportedClaimsCount(Integer unsupportedClaimsCount) {
+        this.unsupportedClaimsCount = unsupportedClaimsCount;
+    }
+
+    public String getGroundingStatus() {
+        return groundingStatus;
+    }
+
+    public void setGroundingStatus(String groundingStatus) {
+        this.groundingStatus = groundingStatus;
+    }
+}

@@ -20,6 +20,9 @@ public class TokenUsageEvent {
     @Column(name = "operation_name", nullable = false, length = 128)
     private String operationName;
 
+    @Column(name = "run_id", length = 100)
+    private String runId;
+
     @Column(name = "model_name", nullable = false, length = 128)
     private String modelName;
 
@@ -65,6 +68,14 @@ public class TokenUsageEvent {
 
     public void setOperationName(String operationName) {
         this.operationName = operationName;
+    }
+
+    public String getRunId() {
+        return runId;
+    }
+
+    public void setRunId(String runId) {
+        this.runId = runId;
     }
 
     public String getModelName() {

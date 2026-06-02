@@ -3,6 +3,7 @@ package com.document.documentetl.service;
 import com.document.documentetl.dto.TokenUsageEventResponse;
 import com.document.documentetl.dto.TokenUsageOperationDto;
 import com.document.documentetl.dto.TokenUsageSummaryResponse;
+import com.document.documentetl.logging.ActionTraceContext;
 import com.document.documentetl.model.TokenUsageEvent;
 import com.document.documentetl.repository.TokenUsageEventRepository;
 import com.document.documentetl.repository.TokenUsageOperationProjection;
@@ -38,6 +39,7 @@ public class TokenUsageManagerService {
 
         TokenUsageEvent event = new TokenUsageEvent();
         event.setOperationName(normalizeOperationName(operationName));
+        event.setRunId(normalizeRunId(ActionTraceContext.getFlowId()));
         event.setModelName(normalizeModelName(modelName));
         event.setPromptChars(promptChars);
         event.setCompletionChars(completionChars);
@@ -57,6 +59,7 @@ public class TokenUsageManagerService {
 
         TokenUsageEvent event = new TokenUsageEvent();
         event.setOperationName(normalizeOperationName(operationName));
+        event.setRunId(normalizeRunId(ActionTraceContext.getFlowId()));
         event.setModelName(normalizeModelName(modelName));
         event.setPromptChars(promptChars);
         event.setCompletionChars(0);
@@ -101,6 +104,7 @@ public class TokenUsageManagerService {
         return tokenUsageEventRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, normalizedLimit)).stream()
                 .map(event -> new TokenUsageEventResponse(
                         event.getId(),
+                        event.getRunId(),
                         event.getOperationName(),
                         event.getModelName(),
                         event.getPromptChars(),
@@ -158,6 +162,14 @@ public class TokenUsageManagerService {
         }
         String normalized = operationName.trim();
         return normalized.length() > 128 ? normalized.substring(0, 128) : normalized;
+    }
+
+    private static String normalizeRunId(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return null;
+        }
+        String normalized = runId.trim();
+        return normalized.length() > 100 ? normalized.substring(0, 100) : normalized;
     }
 
     private static String normalizeModelName(String modelName) {
