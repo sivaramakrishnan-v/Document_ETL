@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documentetl
+  labels:
+    app: documentetl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: documentetl
+  template:
+    metadata:
+      labels:
+        app: documentetl
+    spec:
+      containers:
+        - name: documentetl
+          image: image-registry.openshift-image-registry.svc:5000/documentetl/documentetl:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          envFrom:
+            - configMapRef:
+                name: documentetl-config
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: documentetl-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: VERTEX_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: documentetl-secrets
+                  key: VERTEX_PROJECT_ID
+            - name: LANGCHAIN4J_VERTEX_PROJECT
+              valueFrom:
+                secretKeyRef:
+                  name: documentetl-secrets
+                  key: LANGCHAIN4J_VERTEX_PROJECT
+            - name: LANGCHAIN4J_CHAT_PROJECT
+              valueFrom:
+                secretKeyRef:
+                  name: documentetl-secrets
+                  key: LANGCHAIN4J_CHAT_PROJECT
+          volumeMounts:
+            - name: gcp-credentials
+              mountPath: /var/run/secrets/documentetl-gcp
+              readOnly: true
+      volumes:
+        - name: gcp-credentials
+          secret:
+            secretName: documentetl-secrets
+            items:
+              - key: gcp-vertex-key.json
+                path: gcp-vertex-key.json

@@ -1,0 +1,63 @@
+<section class="dashboard">
+  <div class="toolbar">
+    <div>
+      <h2>Platform Overview</h2>
+      <p>Operational summary from currently exposed backend services.</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="loadDashboard()" [disabled]="isLoading">
+      {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+
+  <p class="notice" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <section class="metric-grid">
+    <article class="metric-card">
+      <small>Total Documents</small>
+      <strong>{{ documents.length || 'N/A' }}</strong>
+    </article>
+    <article class="metric-card">
+      <small>Total Chunks</small>
+      <strong>{{ totalChunks ?? 'N/A' }}</strong>
+    </article>
+    <article class="metric-card">
+      <small>Total Embeddings</small>
+      <strong>{{ totalEmbeddings ?? 'N/A' }}</strong>
+    </article>
+    <article class="metric-card">
+      <small>Questions Asked</small>
+      <strong>{{ questionsAsked || 'N/A' }}</strong>
+    </article>
+    <article class="metric-card">
+      <small>Recent Checkpoints</small>
+      <strong>{{ checkpoints.length || 'N/A' }}</strong>
+    </article>
+    <article class="metric-card">
+      <small>Latest Pipeline Status</small>
+      <strong>{{ latestPipelineStatus }}</strong>
+    </article>
+  </section>
+
+  <section class="quick-actions">
+    <a routerLink="/upload">Upload Document</a>
+    <a routerLink="/documents">View Documents</a>
+    <a routerLink="/ask">Ask Question</a>
+    <a routerLink="/results">View Results</a>
+    <a routerLink="/pipeline">View Pipeline Status</a>
+  </section>
+
+  <section class="card">
+    <div class="card-header compact">
+      <h3>Recent Activity</h3>
+    </div>
+    <div class="activity-list" *ngIf="checkpoints.length > 0; else noActivity">
+      <article class="activity-item" *ngFor="let checkpoint of checkpoints.slice(0, 5)">
+        <strong>{{ checkpoint.userQuery || checkpoint.checkpointId }}</strong>
+        <span>{{ checkpoint.workflowStatus || 'Status unavailable' }} | {{ checkpoint.createdAt || 'No timestamp' }}</span>
+      </article>
+    </div>
+    <ng-template #noActivity>
+      <p class="empty-state">No recent checkpoint activity returned by backend services.</p>
+    </ng-template>
+  </section>
+</section>

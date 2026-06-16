@@ -1,0 +1,12 @@
+.card{min-width:0;padding:var(--card-padding);border:1px solid var(--border-soft);border-radius:var(--radius-xl);background:var(--card);box-shadow:var(--shadow-card)}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--card-gap);margin-bottom:var(--space-3)}
+h2{margin:0 0 var(--space-1);color:var(--text);font-size:var(--font-size-xl)}.card-header p{margin:0;color:var(--muted);font-size:var(--font-size-sm)}
+.secondary-button{height:var(--button-height);padding:0 var(--space-4);border:0;border-radius:var(--radius-pill);color:#fff;background:var(--slate-bg);font-size:var(--font-size-sm);font-weight:var(--font-semibold)}.secondary-button:disabled{opacity:.6}
+.notice{margin:var(--space-3) 0;padding:var(--space-3);border:1px solid var(--border-soft);border-left:4px solid var(--cyan);border-radius:var(--radius-lg);color:var(--muted);background:#f8fafb;font-size:var(--font-size-sm)}.notice.error{border-left-color:var(--red);background:var(--red-bg)}
+.pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--card-gap);margin:var(--space-5) 0 var(--space-2)}
+.pipeline-stage{min-width:0;padding:var(--space-4) var(--space-3);border:1px solid var(--border-soft);border-radius:var(--radius-lg);background:rgba(255,255,255,.78);box-shadow:var(--shadow-card);text-align:center}
+.step-number{display:grid;place-items:center;width:26px;height:26px;margin:0 auto var(--space-2);border-radius:var(--radius-pill);color:#fff;background:var(--muted-soft);font-size:var(--font-size-sm);font-weight:var(--font-bold)}
+.pipeline-stage.completed .step-number{background:var(--green)}.pipeline-stage.in-progress .step-number{background:var(--amber)}
+.pipeline-stage strong{display:block;margin-bottom:var(--space-2);color:var(--text-soft);font-size:var(--font-size-md)}.pipeline-stage p{margin:var(--space-2) 0 0;color:var(--muted);font-size:var(--font-size-sm)}
+.status-badge.completed{background:var(--green-bg);color:var(--green)}.status-badge.in-progress,.status-badge.warning{background:var(--amber-bg);color:var(--amber)}.status-badge.pending{background:var(--slate-bg);color:var(--text-soft)}
+@media(max-width:1000px){.pipeline{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.pipeline{grid-template-columns:repeat(2,1fr)}}

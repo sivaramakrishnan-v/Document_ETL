@@ -1,0 +1,18 @@
+<div class="app-layout">
+  <app-sidebar></app-sidebar>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">{{ pageSubtitle }}</p>
+        <h1>{{ pageTitle }}</h1>
+      </div>
+      <div class="topbar-meta">
+        <span class="meta-pill">Angular Console</span>
+        <span class="meta-pill muted">API Proxy -> localhost:8080</span>
+      </div>
+    </header>
+
+    <router-outlet></router-outlet>
+  </main>
+</div>

@@ -1,0 +1,56 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Uploaded Documents</h2>
+      <p>Document metadata loaded from backend services.</p>
+    </div>
+    <span class="status-badge neutral">{{ isLoading ? 'Loading' : documents.length + ' documents' }}</span>
+  </div>
+
+  <p class="notice" *ngIf="message">{{ message }}</p>
+  <p class="notice error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="empty-state" *ngIf="!isLoading && documents.length === 0">
+    No uploaded documents found.
+  </div>
+
+  <div class="table-wrap" *ngIf="documents.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>File name</th>
+          <th>Type</th>
+          <th>Uploaded</th>
+          <th>Status</th>
+          <th>Chunks</th>
+          <th>Embeddings</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let document of documents">
+          <td>{{ document.id }}</td>
+          <td>
+            <strong>{{ document.fileName }}</strong>
+          </td>
+          <td>{{ document.fileType }}</td>
+          <td>{{ document.uploadedAt }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="statusClass(document.status)">
+              {{ document.status }}
+            </span>
+          </td>
+          <td>{{ document.chunkCount }}</td>
+          <td>{{ document.embeddingCount ?? 'Not available from backend yet' }}</td>
+          <td class="actions">
+            <button type="button" disabled title="Document detail endpoint is not currently exposed by backend services.">View</button>
+            <button type="button" disabled title="Reprocess action is not currently exposed by backend services.">Reprocess</button>
+            <a [routerLink]="['/ask']">Ask Question</a>
+            <button type="button" disabled title="Delete action is not currently exposed by backend services.">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

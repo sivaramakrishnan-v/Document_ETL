@@ -1,0 +1,18 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Observability</h2>
+      <p>Prepared operational metrics view for backend observability endpoints.</p>
+    </div>
+    <span class="status-badge">Backend pending</span>
+  </div>
+
+  <p class="notice">Observability metrics are not available from backend yet.</p>
+
+  <div class="metric-grid">
+    <article *ngFor="let metric of metrics">
+      <small>{{ metric }}</small>
+      <strong>This information is not currently exposed by backend services.</strong>
+    </article>
+  </div>
+</section>

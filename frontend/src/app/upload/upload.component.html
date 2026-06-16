@@ -1,0 +1,37 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Full ETL Pipeline</h2>
+      <p>Upload a source document for backend ingestion.</p>
+    </div>
+    <span class="status-badge neutral">Ready</span>
+  </div>
+
+  <label class="upload-zone" for="document-file">
+    <span class="upload-icon">AI</span>
+    <span class="upload-copy">
+      <strong>Upload document for GenAI processing</strong>
+      <p>Choose a file to parse, chunk, embed, and prepare for grounded Q&A.</p>
+    </span>
+
+    <input id="document-file" type="file" multiple (change)="onFileSelected($event)">
+  </label>
+
+  <div class="upload-actions">
+    <button class="primary-button" type="button" (click)="uploadDocument()" [disabled]="isUploading">
+      {{ isUploading ? 'Uploading...' : 'Upload document(s)' }}
+    </button>
+    <a class="secondary-link" routerLink="/pipeline">Open Pipeline Status</a>
+  </div>
+
+  <div class="selected-file" *ngIf="selectedFiles.length > 0">
+    <strong>Selected file(s):</strong>
+    <ul>
+      <li *ngFor="let file of selectedFiles">{{ file.name }} ({{ file.size }} bytes)</li>
+    </ul>
+  </div>
+
+  <p class="notice" *ngIf="uploadMessage">{{ uploadMessage }}</p>
+
+  <pre class="response" *ngIf="uploadResponse">{{ uploadResponse | json }}</pre>
+</section>

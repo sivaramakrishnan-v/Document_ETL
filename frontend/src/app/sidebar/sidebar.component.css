@@ -1,0 +1,131 @@
+.sidebar {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: #e8f0f8;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(91, 95, 240, .30), transparent 28%),
+    radial-gradient(circle at 100% 32%, rgba(8, 145, 178, .18), transparent 30%),
+    linear-gradient(180deg, var(--sidebar), var(--sidebar-2));
+  box-shadow: 16px 0 38px rgba(8, 17, 31, .28);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: var(--space-6) var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  box-shadow: 0 14px 28px rgba(91, 95, 240, .30);
+  font-weight: 800;
+}
+
+.brand small,
+.sidebar-footer small {
+  display: block;
+  margin-top: 3px;
+  color: #9fb2c5;
+}
+
+nav {
+  display: grid;
+  gap: 8px;
+  padding: var(--space-5) var(--space-3);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  color: #cbd5e1;
+  font-size: var(--font-size-base);
+  text-decoration: none;
+}
+
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: #d8eaff;
+  background: rgba(255, 255, 255, .08);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.nav-text {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-text strong {
+  font-size: var(--font-size-base);
+}
+
+.nav-text small {
+  color: #6fa8d4;
+  font-size: var(--font-size-xs);
+}
+
+.nav-item:hover,
+.nav-item.active {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+  transform: translateX(2px);
+}
+
+.nav-item.active .nav-icon {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  font-size: var(--font-size-md);
+}
+
+.system-status {
+  margin-bottom: 15px;
+  color: #d9e5ee;
+}
+
+.system-status i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #32bd86;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    min-height: auto;
+  }
+
+  nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+}

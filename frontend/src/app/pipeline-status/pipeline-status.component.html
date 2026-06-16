@@ -1,0 +1,33 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Processing Pipeline Status</h2>
+      <p>Live ETL pipeline summary loaded through DocumentEtlService.</p>
+      <p *ngIf="lastRefresh">Last refresh: {{ lastRefresh }}</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="loadPipelineStatus()" [disabled]="isLoading">
+      {{ isLoading ? 'Refreshing...' : 'Refresh status' }}
+    </button>
+  </div>
+
+  <p class="notice" [ngClass]="{ error: hasError }" *ngIf="message">{{ message }}</p>
+
+  <div class="empty-state" *ngIf="!isLoading && stages.length === 0">
+    No pipeline status is available.
+  </div>
+
+  <div class="pipeline" *ngIf="stages.length > 0">
+    <div
+      class="pipeline-stage"
+      *ngFor="let stage of stages; let index = index"
+      [ngClass]="stageClass(stage)"
+    >
+      <span class="step-number">{{ index + 1 }}</span>
+      <strong>{{ stage.name }}</strong>
+      <span class="status-badge" [ngClass]="stageClass(stage)">
+        {{ stageLabel(stage) }}
+      </span>
+      <p>{{ stage.description }}</p>
+    </div>
+  </div>
+</section>

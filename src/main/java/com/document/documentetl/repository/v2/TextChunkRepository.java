@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface TextChunkRepository extends JpaRepository<TextChunk, UUID> {
     boolean existsByContentId(UUID contentId);
 
+    long countByDocumentId(Long documentId);
+
     List<TextChunk> findByContentIdOrderByChunkIndex(UUID contentId);
 
     @Query("""

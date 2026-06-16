@@ -258,8 +258,8 @@ public class RagStateGraphFactory {
 
         private static String toEvidence(SearchResult result) {
             String snippet = result.getText() == null ? "" : result.getText().replaceAll("\\s+", " ").trim();
-            if (snippet.length() > 180) {
-                snippet = snippet.substring(0, 180) + "...";
+            if (snippet.length() > 600) {
+                snippet = snippet.substring(0, 600) + "...";
             }
             return "doc=" + result.getDocumentId() + " score=" + String.format(Locale.ROOT, "%.4f", result.getSimilarity()) + " text=" + snippet;
         }
@@ -343,9 +343,11 @@ public class RagStateGraphFactory {
         public Map<String, Object> apply(RagAgentState state) {
             String evidence = String.join("\n", state.selectedEvidence());
             String prompt = """
-                    Answer the user question only using the evidence.
-                    If evidence is insufficient, say so clearly.
-                    Keep the answer concise and include citation markers like [doc=123] when available.
+                    Answer the user question using only the evidence below.
+                    If the evidence contains relevant facts, synthesize a clear answer from those facts.
+                    Say the evidence is insufficient only when the evidence has no relevant facts for the question.
+                    Do not include inline citation markers, source IDs, or tokens like [doc=123] in the answer.
+                    Use 2 to 4 short sentences unless the question needs a list.
 
                     Question:
                     %s
@@ -354,7 +356,7 @@ public class RagStateGraphFactory {
                     %s
                     """.formatted(state.normalizedQuery().orElse(""), evidence);
 
-            String answer = sanitizeSingleLine(safeGenerate(prompt, "agent.answer_generator"));
+            String answer = sanitizeAnswer(safeGenerate(prompt, "agent.answer_generator"));
             if (answer.isBlank()) {
                 answer = "I do not have enough evidence in the indexed documents to answer this confidently.";
             }
@@ -530,6 +532,19 @@ public class RagStateGraphFactory {
             return "";
         }
         return raw.replaceAll("\\s+", " ").trim();
+    }
+
+    private static String sanitizeAnswer(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw
+                .replace("\r\n", "\n")
+                .replaceAll("\\s*\\[doc=\\d+]", "")
+                .replaceAll("\\s*\\(doc=\\d+\\)", "")
+                .replaceAll("[ \\t]+", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
     }
 
     private static List<String> extractCitations(List<String> evidence) {

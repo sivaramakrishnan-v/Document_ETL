@@ -16,14 +16,18 @@ public class RrfHybridRetrievalService implements RetrievalStrategy {
     private static final int RRF_K = 60;
 
     private static final String KEYWORD_SEARCH_SQL = """
-            SELECT chunk_text,
-                   document_id,
+            SELECT chunk.chunk_text,
+                   chunk.document_id,
                    ts_rank_cd(
-                       to_tsvector('english', COALESCE(chunk_text, '')),
+                       to_tsvector('english', COALESCE(chunk.chunk_text, '')),
                        plainto_tsquery('english', ?)
                    ) AS keyword_score
-            FROM knowledge.document_chunks
-            WHERE to_tsvector('english', COALESCE(chunk_text, ''))
+            FROM document_etl.text_chunks chunk
+            JOIN document_etl.source_documents source
+              ON source.document_id = chunk.document_id
+             AND source.content_hash = chunk.content_hash
+            WHERE source.status = 'COMPLETED'
+              AND to_tsvector('english', COALESCE(chunk.chunk_text, ''))
                   @@ plainto_tsquery('english', ?)
             ORDER BY keyword_score DESC
             LIMIT ?

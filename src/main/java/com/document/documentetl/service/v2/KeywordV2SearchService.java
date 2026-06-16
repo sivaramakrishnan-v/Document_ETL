@@ -41,7 +41,7 @@ public class KeywordV2SearchService implements RetrievalStrategy {
                 (rs, rowNum) -> new SearchResult(
                         rs.getString("chunk_text"),
                         toDocumentId(rs.getObject("document_id")),
-                        rs.getDouble("keyword_score")
+                        normalizeKeywordScore(rs.getDouble("keyword_score"))
                 ),
                 query,
                 query,
@@ -57,5 +57,9 @@ public class KeywordV2SearchService implements RetrievalStrategy {
             return number.longValue();
         }
         return Long.parseLong(rawValue.toString());
+    }
+
+    private static double normalizeKeywordScore(double keywordScore) {
+        return Math.min(1.0d, 0.75d + Math.max(0.0d, keywordScore));
     }
 }

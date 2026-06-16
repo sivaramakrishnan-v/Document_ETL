@@ -1,0 +1,30 @@
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-mark">D</span>
+    <div>
+      <strong>DocumentETL</strong>
+      <small>Operations Console</small>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="DocumentETL navigation">
+    <a
+      class="nav-item"
+      *ngFor="let item of navigationItems"
+      [routerLink]="item.route"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
+      <span class="nav-icon">{{ item.icon }}</span>
+      <span class="nav-text">
+        <strong>{{ item.label }}</strong>
+        <small>{{ item.number }}</small>
+      </span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="system-status"><i></i> Spring Boot API</div>
+    <small>localhost:8080 through Angular proxy</small>
+  </div>
+</aside>

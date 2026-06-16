@@ -1,0 +1,13 @@
+.card{min-width:0;padding:var(--card-padding);border:1px solid var(--border-soft);border-radius:var(--radius-xl);background:var(--card);box-shadow:var(--shadow-card)}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--card-gap);margin-bottom:var(--space-3)}
+h2{margin:0 0 var(--space-1);color:var(--text);font-size:var(--font-size-xl)}.card-header p,.upload-zone p,.notice{margin:0;color:var(--muted);font-size:var(--font-size-sm)}
+.upload-zone{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-6);border:1px dashed rgba(91,95,240,.45);border-radius:var(--radius-xl);background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(238,243,255,.92))}
+.upload-zone:hover{border-color:var(--indigo)}.upload-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:var(--radius-lg);color:#fff;background:var(--accent);font-size:var(--font-size-sm);font-weight:var(--font-bold)}
+.upload-copy{display:grid;gap:var(--space-1)}.upload-copy strong{color:var(--text);font-size:var(--font-size-lg)}
+input{width:1px;max-width:1px;height:1px;opacity:0;overflow:hidden;position:absolute}
+.upload-actions{display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-4);flex-wrap:wrap}.hint{color:var(--muted);font-size:var(--font-size-sm)}
+.primary-button:disabled{opacity:.6}.secondary-link{height:var(--button-height);display:inline-flex;align-items:center;padding:0 var(--space-4);border-radius:var(--radius-pill);font-size:var(--font-size-sm);font-weight:var(--font-bold);text-decoration:none}
+.selected-file{margin-top:var(--space-3);padding:var(--space-3);border:1px solid var(--border-soft);border-left:4px solid var(--green);border-radius:var(--radius-lg);background:var(--green-bg);color:var(--green);font-size:var(--font-size-sm)}.selected-file ul{margin:var(--space-2) 0 0;padding-left:18px}.selected-file li+li{margin-top:var(--space-1)}
+.notice{margin:var(--space-3) 0 0;padding:var(--space-3);border:1px solid var(--border-soft);border-left:4px solid var(--cyan);border-radius:var(--radius-lg);background:var(--blue-bg)}
+.response{max-height:240px;overflow:auto;margin:var(--space-3) 0 0;padding:var(--space-3);border-radius:var(--radius-md);color:#d9e7f3;background:#16283d;font-size:var(--font-size-sm)}
+@media(max-width:720px){.upload-zone,.upload-actions{align-items:stretch;flex-direction:column}}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: documentetl
+  labels:
+    app: documentetl
+spec:
+  type: ClusterIP
+  selector:
+    app: documentetl
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

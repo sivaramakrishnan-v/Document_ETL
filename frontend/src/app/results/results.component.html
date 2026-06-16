@@ -1,0 +1,259 @@
+<section class="hero-card">
+  <div>
+    <p class="eyebrow">Evidence Review</p>
+    <h2>Results & Citations</h2>
+    <p>Review grounded answers, checkpoint metadata, citations, and retrieved chunks from persisted RAG runs.</p>
+  </div>
+  <span class="status-badge" [ngClass]="statusClass(groundingStatus || workflowStatus)" *ngIf="selectedCheckpoint">
+    {{ displayValue(groundingStatus || workflowStatus) }}
+  </span>
+</section>
+
+<section class="card">
+  <div class="history-toolbar">
+    <label class="inline-field">
+      Thread ID
+      <input type="text" [(ngModel)]="threadId" placeholder="Enter a thread ID">
+    </label>
+    <button class="secondary-button" type="button" (click)="loadThreadHistory()" [disabled]="isLoading">
+      {{ isLoading ? 'Loading...' : 'Load history' }}
+    </button>
+    <button class="secondary-button muted" type="button" (click)="loadResults()" [disabled]="isLoading">
+      Load all
+    </button>
+  </div>
+  <p class="notice" *ngIf="message">{{ message }}</p>
+</section>
+
+<section class="card">
+  <div class="card-header compact">
+    <div>
+      <h3>Result Records</h3>
+      <p>15 records per page. Select a run to inspect the evidence package below.</p>
+    </div>
+    <span class="count-pill">{{ checkpoints.length }} total</span>
+  </div>
+
+  <div class="record-list" *ngIf="checkpoints.length > 0; else noHistory">
+    <button
+      class="record-item"
+      type="button"
+      *ngFor="let checkpoint of paginatedCheckpoints()"
+      [ngClass]="{ selected: checkpoint.checkpointId === selectedCheckpoint?.checkpointId }"
+      (click)="selectCheckpoint(checkpoint)"
+    >
+      <span class="record-main">
+        <strong>{{ recordTitle(checkpoint) }}</strong>
+        <small>{{ formatDate(checkpoint.createdAt) }}</small>
+      </span>
+      <span class="record-status">
+        <span class="status-badge" [ngClass]="statusClass(checkpoint.workflowStatus)">
+          {{ displayValue(checkpoint.workflowStatus) }}
+        </span>
+        <span class="status-badge" [ngClass]="statusClass(checkpoint.groundingStatus || checkpoint.validationStatus)">
+          {{ displayValue(checkpoint.groundingStatus || checkpoint.validationStatus) }}
+        </span>
+      </span>
+    </button>
+  </div>
+
+  <ng-template #noHistory>
+    <div class="empty-state">
+      <strong>No checkpoint history loaded</strong>
+      <p>Ask a question in chat, then return here to review persisted answer evidence.</p>
+    </div>
+  </ng-template>
+
+  <div class="pagination" *ngIf="checkpoints.length > pageSize">
+    <button class="secondary-button muted" type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+      Previous
+    </button>
+    <span>Page {{ currentPage }} of {{ totalPages() }}</span>
+    <button class="secondary-button muted" type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages()">
+      Next
+    </button>
+  </div>
+</section>
+
+<ng-container *ngIf="selectedCheckpoint; else noSelection">
+  <section class="evidence-banner" [ngClass]="statusClass(evidenceStatus())">
+    <div>
+      <span class="banner-kicker">Evidence Status</span>
+      <h3>{{ evidenceStatus() }}</h3>
+      <p>{{ evidenceStatusDescription() }}</p>
+    </div>
+    <div class="banner-metrics">
+      <div><span>Citation Coverage</span><b>{{ formatPercent(citationCoverageScore) }}</b></div>
+      <div><span>Unsupported Claims</span><b>{{ displayValue(unsupportedClaimsCount) }}</b></div>
+    </div>
+  </section>
+
+  <section class="card question-card">
+    <span class="section-label">Question</span>
+    <h3>{{ displayValue(question) }}</h3>
+  </section>
+
+  <section class="card answer-card">
+    <span class="section-label">Answer</span>
+    <p class="answer-text">
+      <ng-container *ngFor="let part of answerParts()">
+        <span *ngIf="part.citationId; else answerText" class="inline-citation">{{ part.text }}</span>
+        <ng-template #answerText>{{ part.text }}</ng-template>
+      </ng-container>
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-header compact">
+      <div>
+        <h3>Evidence Summary</h3>
+        <p>Grounding metrics persisted for the selected checkpoint.</p>
+      </div>
+    </div>
+    <div class="metric-row">
+      <div><span>Groundedness</span><b>{{ formatPercent(groundingScore) }}</b><small>Answer support score</small></div>
+      <div><span>Citation Coverage</span><b>{{ formatPercent(citationCoverageScore) }}</b><small>Claims supported by evidence</small></div>
+      <div><span>Citation Count</span><b>{{ citations.length || 'N/A' }}</b><small>Stored citation references</small></div>
+      <div><span>Retrieved Chunks</span><b>{{ chunkViews().length || 'N/A' }}</b><small>Chunks used during generation</small></div>
+      <div><span>Unsupported Claims</span><b>{{ displayValue(unsupportedClaimsCount) }}</b><small>Claims not backed by evidence</small></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header compact">
+      <div>
+        <h3>Sources Used</h3>
+        <p>Documents that contributed evidence to this answer.</p>
+      </div>
+      <span class="count-pill">{{ sourceViews().length || 'N/A' }} sources</span>
+    </div>
+    <div class="source-grid" *ngIf="sourceViews().length > 0; else noSources">
+      <article class="source-card" *ngFor="let source of sourceViews()">
+        <h4>{{ source.label }}</h4>
+        <p>Document ID {{ source.documentId }}</p>
+        <span>{{ source.chunkCount || 'N/A' }} chunk{{ source.chunkCount === 1 ? '' : 's' }} used</span>
+      </article>
+    </div>
+    <ng-template #noSources>
+      <div class="empty-state">
+        <strong>No source documents available</strong>
+        <p>The selected checkpoint did not persist document IDs or source metadata.</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <section class="card">
+    <div class="card-header compact">
+      <div>
+        <h3>Retrieved Chunks</h3>
+        <p>Primary evidence snippets available to answer generation.</p>
+      </div>
+    </div>
+    <div class="chunk-list" *ngIf="chunkViews().length > 0; else noChunkData">
+      <article class="chunk-card" *ngFor="let chunk of chunkViews()">
+        <div class="chunk-head">
+          <div>
+            <h4>{{ chunk.title }}</h4>
+            <small>{{ chunk.chunkId }}</small>
+          </div>
+          <span class="score-pill">{{ formatScore(chunk.score) }}</span>
+        </div>
+        <div class="chunk-meta">
+          <span>Document {{ chunk.documentId }}</span>
+          <span>Page {{ chunk.page }}</span>
+        </div>
+        <div class="score-bar" *ngIf="chunk.score !== null">
+          <span [style.width.%]="scorePercent(chunk.score)"></span>
+        </div>
+        <p class="preview-text">{{ chunkPreview(chunk) }}</p>
+        <button class="text-button" type="button" *ngIf="hasChunkOverflow(chunk)" (click)="toggleChunk(chunk.key)">
+          {{ isChunkExpanded(chunk.key) ? 'Show less' : 'Show full chunk' }}
+        </button>
+      </article>
+    </div>
+    <ng-template #noChunkData>
+      <div class="empty-state">
+        <strong>No retrieved chunks available</strong>
+        <p>The checkpoint has no persisted context snapshot or chunk IDs.</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <section class="page-grid two-column lower-grid">
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <h3>Citations</h3>
+          <p>Reference markers associated with the selected answer.</p>
+        </div>
+      </div>
+      <div class="citation-list" *ngIf="citationViews().length > 0; else noCitations">
+        <article class="citation-card" *ngFor="let citation of citationViews()">
+          <div>
+            <h4>{{ citation.label }}</h4>
+            <p>{{ citation.source }}</p>
+          </div>
+          <div class="citation-meta">
+            <span>Doc {{ citation.documentId }}</span>
+            <span>Chunk {{ citation.chunkId }}</span>
+            <span>Page {{ citation.page }}</span>
+            <span>Confidence {{ formatScore(citation.score) }}</span>
+          </div>
+          <p class="preview-text">{{ citation.text }}</p>
+        </article>
+      </div>
+      <ng-template #noCitations>
+        <div class="empty-state">
+          <strong>No citations available</strong>
+          <p>The selected checkpoint did not persist citation references.</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <div>
+          <h3>Workflow Information</h3>
+          <p>Operational view of how this answer was generated and validated.</p>
+        </div>
+      </div>
+      <div class="workflow-summary">
+        <div><span>Workflow</span><b class="status-badge" [ngClass]="statusClass(workflowStatus)">{{ displayValue(workflowStatus) }}</b></div>
+        <div><span>Validation</span><b class="status-badge" [ngClass]="statusClass(selectedCheckpoint.validationStatus)">{{ displayValue(selectedCheckpoint.validationStatus) }}</b></div>
+        <div><span>Retrieval Strategy</span><b>{{ displayValue(selectedCheckpoint.retrievalStrategy) }}</b></div>
+      </div>
+    </section>
+  </section>
+
+  <section class="page-grid two-column lower-grid">
+    <section class="card">
+      <div class="card-header compact">
+        <h3>Why Grounded</h3>
+      </div>
+      <p class="explanation">{{ confidenceExplanation() }}</p>
+    </section>
+
+    <section class="card">
+      <div class="card-header compact">
+        <h3>Technical Details</h3>
+      </div>
+      <dl class="details">
+        <dt>Checkpoint ID</dt>
+        <dd>{{ displayValue(selectedCheckpoint.checkpointId) }}</dd>
+        <dt>Thread ID</dt>
+        <dd>{{ displayValue(selectedCheckpoint.threadId) }}</dd>
+        <dt>Created Timestamp</dt>
+        <dd>{{ formatDate(createdAt) }}</dd>
+      </dl>
+    </section>
+  </section>
+</ng-container>
+
+<ng-template #noSelection>
+  <section class="card">
+    <div class="empty-state">
+      <strong>No selected checkpoint</strong>
+      <p>Select a result record above to inspect its answer, citations, and retrieved chunks.</p>
+    </div>
+  </section>
+</ng-template>

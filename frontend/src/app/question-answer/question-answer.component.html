@@ -1,0 +1,73 @@
+<section class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Ask Question</h1>
+      <p class="page-subtitle">Ask against indexed documents using the agentic RAG service.</p>
+    </div>
+    <div class="header-actions">
+      <button class="secondary-button" (click)="startNewChat()" *ngIf="messages.length > 0">New Chat</button>
+      <span class="status-badge" [class.neutral]="!totalDocuments">{{ totalDocuments > 0 ? totalDocuments + ' Documents Indexed' : 'Ready' }}</span>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="conversation" *ngIf="messages.length > 0; else emptyState">
+      <div class="message-row" *ngFor="let msg of messages" [ngClass]="msg.role">
+        <div class="message-bubble">
+          <span class="message-label">{{ msg.role === 'user' ? 'You' : 'Assistant' }}</span>
+          <p>{{ msg.text }}</p>
+
+          <ng-container *ngIf="msg.role === 'assistant' && msg.response">
+            <div class="message-footer">
+              <div class="metadata-group">
+                <span class="metadata-item">{{ msg.response.groundingScore || 0 }}% Grounded</span>
+                <span class="metadata-item">{{ msg.response.citations.length || 0 }} Citations</span>
+                <span class="metadata-item">{{ msg.response.retrievedChunks?.length || 0 }} Chunks</span>
+              </div>
+              <a class="evidence-link" [routerLink]="['/results']" [queryParams]="{ threadId: msg.response.threadId, checkpointId: msg.response.checkpointId }">View Full Evidence →</a>
+            </div>
+
+            <div class="sources-section" *ngIf="msg.response.retrievedDocuments && msg.response.retrievedDocuments.length > 0">
+              <h3 class="sources-title">Sources</h3>
+              <div class="sources-list">
+                <span class="source-chip" *ngFor="let docId of msg.response.retrievedDocuments">Document {{ docId }}</span>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+      <div class="message-row assistant" *ngIf="isAsking">
+        <div class="message-bubble pending">
+          <span class="message-label">Assistant</span>
+          <p>Thinking...</p>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty-state-content">
+        <h2 class="empty-state-title">Ask a question about your indexed documents</h2>
+        <div class="suggested-questions">
+          <button *ngFor="let sq of suggestedQuestions" class="suggested-question-btn" (click)="populateQuestion(sq)">
+            {{ sq }}
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </div>
+
+  <p class="notice error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="composer">
+    <textarea
+      rows="1"
+      [(ngModel)]="question"
+      placeholder="Ask about indexed documents..."
+      (keydown)="handleComposerKeydown($event)"
+      class="composer-input"
+    ></textarea>
+    <button class="primary-button" type="button" (click)="askQuestion()" [disabled]="isAsking || !question.trim()">
+      {{ isAsking ? 'Asking...' : 'Send' }}
+    </button>
+  </div>
+</section>

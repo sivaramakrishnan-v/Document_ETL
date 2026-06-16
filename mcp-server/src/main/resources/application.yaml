@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: document-etl-mcp-server
+  main:
+    banner-mode: off
+    web-application-type: none
+
+logging:
+  level:
+    com.documentetl.mcp: INFO
+    org.springframework: WARN
+
+document-etl:
+  base-url: http://localhost:8080
+  connect-timeout: 5s
+  read-timeout: 60s
+  endpoints:
+    upload: /api/documents/upload
+    status: /api/documents/{documentId}/status
+    ask: /api/chat/ask
+    search: /api/search

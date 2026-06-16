@@ -1,0 +1,66 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Token Usage</h2>
+      <p>Model consumption and request health from backend token tracking.</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="loadTokenUsage()" [disabled]="isLoading">
+      {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+  <p class="notice">{{ message }}</p>
+
+  <div class="metric-grid" *ngIf="summary; else noMetrics">
+    <article><small>Prompt Tokens</small><strong>{{ summary.promptTokens }}</strong></article>
+    <article><small>Completion Tokens</small><strong>{{ summary.completionTokens }}</strong></article>
+    <article><small>Total Tokens</small><strong>{{ summary.totalTokens }}</strong></article>
+    <article><small>Embedding Tokens</small><strong>Not available from backend yet</strong></article>
+    <article><small>Estimated Cost</small><strong>Not available from backend yet</strong></article>
+    <article><small>Failure Rate</small><strong>{{ summary.failureRatePct }}%</strong></article>
+  </div>
+  <ng-template #noMetrics>
+    <p class="empty-state">Token usage metrics are not available from backend yet.</p>
+  </ng-template>
+</section>
+
+<section class="card">
+  <div class="card-header compact">
+    <h3>Top Operations</h3>
+  </div>
+  <div class="table-wrap" *ngIf="summary?.topOperations?.length; else noOperations">
+    <table>
+      <thead><tr><th>Operation</th><th>Requests</th><th>Prompt</th><th>Completion</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let op of summary?.topOperations">
+          <td>{{ op.operationName }}</td>
+          <td>{{ op.requestCount }}</td>
+          <td>{{ op.promptTokens }}</td>
+          <td>{{ op.completionTokens }}</td>
+          <td>{{ op.totalTokens }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noOperations><p class="empty-state">No token operation data returned by backend.</p></ng-template>
+</section>
+
+<section class="card">
+  <div class="card-header compact">
+    <h3>Recent Token Usage Events</h3>
+  </div>
+  <div class="table-wrap" *ngIf="events.length > 0; else noEvents">
+    <table>
+      <thead><tr><th>Operation</th><th>Model</th><th>Status</th><th>Total Tokens</th><th>Created</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let event of events">
+          <td>{{ event.operationName || 'Unknown' }}</td>
+          <td>{{ event.modelName || 'Unknown' }}</td>
+          <td>{{ event.status || 'Unknown' }}</td>
+          <td>{{ event.totalTokens }}</td>
+          <td>{{ event.createdAt || 'Unknown' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noEvents><p class="empty-state">No token usage events returned by backend.</p></ng-template>
+</section>

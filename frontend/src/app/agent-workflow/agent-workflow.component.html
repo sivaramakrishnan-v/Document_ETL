@@ -1,0 +1,58 @@
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Agent Workflow</h2>
+      <p>Persisted workflow checkpoint information exposed by backend services.</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="loadWorkflow()" [disabled]="isLoading">
+      {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+  <p class="notice">{{ message }}</p>
+
+  <div class="workflow-grid" *ngIf="selectedCheckpoint; else noWorkflow">
+    <article>
+      <small>Question Received</small>
+      <strong>{{ selectedCheckpoint.userQuery || selectedCheckpoint.normalizedQuery || 'Not available from backend yet' }}</strong>
+    </article>
+    <article>
+      <small>Retrieval</small>
+      <strong>{{ selectedCheckpoint.retrievalStrategy || 'Not available from backend yet' }}</strong>
+    </article>
+    <article>
+      <small>Answer Generation</small>
+      <strong>{{ selectedCheckpoint.generatedAnswer ? 'Answer generated' : 'Not available from backend yet' }}</strong>
+    </article>
+    <article>
+      <small>Validation</small>
+      <strong>{{ selectedCheckpoint.validationStatus || 'Not available from backend yet' }}</strong>
+    </article>
+    <article>
+      <small>Grounding</small>
+      <strong>{{ selectedCheckpoint.groundingStatus || 'Not available from backend yet' }}</strong>
+    </article>
+    <article>
+      <small>Completed</small>
+      <strong>{{ selectedCheckpoint.workflowStatus || 'Not available from backend yet' }}</strong>
+    </article>
+  </div>
+
+  <ng-template #noWorkflow>
+    <p class="empty-state">Agent workflow details are not available from backend yet.</p>
+  </ng-template>
+</section>
+
+<section class="card">
+  <div class="card-header compact">
+    <h3>Recent Workflow Checkpoints</h3>
+  </div>
+  <div class="history-list" *ngIf="checkpoints.length > 0; else noHistory">
+    <button class="history-item" type="button" *ngFor="let checkpoint of checkpoints" (click)="selectedCheckpoint = checkpoint">
+      <strong>{{ checkpoint.userQuery || checkpoint.checkpointId }}</strong>
+      <span>{{ checkpoint.workflowStatus || 'Unknown' }} | {{ checkpoint.createdAt || 'No timestamp' }}</span>
+    </button>
+  </div>
+  <ng-template #noHistory>
+    <p class="empty-state">No checkpoint history found.</p>
+  </ng-template>
+</section>

@@ -15,14 +15,22 @@ import java.util.StringJoiner;
 public class VectorSearchService implements RetrievalStrategy {
 
     private static final String VECTOR_SEARCH_SQL = """
-            SELECT chunk_id::text AS chunk_id,
-                   chunk_text,
-                   document_id,
-                   chunk_index,
-                   (1 - (embedding <=> ?::vector)) AS similarity,
-                   embedding::text AS embedding_text
-            FROM knowledge.document_chunks
-            ORDER BY embedding <=> ?::vector
+            SELECT chunk.chunk_id::text AS chunk_id,
+                   chunk.chunk_text,
+                   chunk.document_id,
+                   chunk.chunk_index,
+                   (1 - (embedding.embedding <=> ?::vector)) AS similarity,
+                   embedding.embedding::text AS embedding_text
+            FROM document_etl.text_chunks chunk
+            JOIN document_etl.chunk_embeddings embedding
+              ON embedding.chunk_id = chunk.chunk_id
+             AND embedding.content_hash = chunk.content_hash
+             AND embedding.embedding_status = 'COMPLETED'
+            JOIN document_etl.source_documents source
+              ON source.document_id = chunk.document_id
+             AND source.content_hash = chunk.content_hash
+             AND source.status = 'COMPLETED'
+            ORDER BY embedding.embedding <=> ?::vector
             LIMIT ?
             """;
 
