@@ -67,6 +67,7 @@ ecs/documentetl-task.json
 python_eval/mlflow_trace_bridge.jsonl
 src/main/java.zip
 src/main/resources/data-*.csv
+src/main/resources/application.properties
 
 # OpenShift local secrets
 openshift/secret.yaml
