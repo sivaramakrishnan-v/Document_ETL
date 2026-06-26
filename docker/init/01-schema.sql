@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS document_etl.rag_workflow_checkpoint (
     retrieved_context_snapshot JSONB,
     generated_answer TEXT,
     citations JSONB,
+    agent_visited JSONB,
+    agent_feedback JSONB,
     validation_status VARCHAR(50),
     groundedness_score NUMERIC(5,4),
     citation_coverage_score NUMERIC(5,4),
@@ -109,7 +111,9 @@ ALTER TABLE document_etl.rag_workflow_checkpoint
 ADD COLUMN IF NOT EXISTS groundedness_score NUMERIC(5,4),
 ADD COLUMN IF NOT EXISTS citation_coverage_score NUMERIC(5,4),
 ADD COLUMN IF NOT EXISTS unsupported_claims_count INTEGER,
-ADD COLUMN IF NOT EXISTS grounding_status VARCHAR(50);
+ADD COLUMN IF NOT EXISTS grounding_status VARCHAR(50),
+ADD COLUMN IF NOT EXISTS agent_visited JSONB,
+ADD COLUMN IF NOT EXISTS agent_feedback JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_rag_checkpoint_thread_id
 ON document_etl.rag_workflow_checkpoint(thread_id);

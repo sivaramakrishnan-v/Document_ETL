@@ -91,6 +91,14 @@ public class RagWorkflowCheckpointService {
     }
 
     @Transactional
+    public void markAgentTrace(UUID checkpointId, List<String> agentVisited, List<String> agentFeedback) {
+        updateCheckpoint(checkpointId, checkpoint -> {
+            checkpoint.setAgentVisited(copyList(agentVisited));
+            checkpoint.setAgentFeedback(copyList(agentFeedback));
+        });
+    }
+
+    @Transactional
     public void markGroundingScored(UUID checkpointId, GroundingScoreResult groundingScoreResult) {
         if (groundingScoreResult == null) {
             return;
@@ -150,6 +158,8 @@ public class RagWorkflowCheckpointService {
         response.setRetrievedContextSnapshot(copyList(checkpoint.getRetrievedContextSnapshot()));
         response.setGeneratedAnswer(checkpoint.getGeneratedAnswer());
         response.setCitations(copyList(checkpoint.getCitations()));
+        response.setAgentVisited(copyList(checkpoint.getAgentVisited()));
+        response.setAgentFeedback(copyList(checkpoint.getAgentFeedback()));
         response.setValidationStatus(checkpoint.getValidationStatus());
         response.setGroundednessScore(checkpoint.getGroundednessScore());
         response.setCitationCoverageScore(checkpoint.getCitationCoverageScore());

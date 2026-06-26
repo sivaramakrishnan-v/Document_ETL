@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AgentWorkflowComponent } from './agent-workflow/agent-workflow.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DocumentListComponent } from './document-list/document-list.component';
 import { ObservabilityComponent } from './observability/observability.component';
@@ -39,6 +40,11 @@ export const routes: Routes = [
     path: 'results',
     component: ResultsComponent,
     data: { title: 'Results & Citations', subtitle: 'Review grounded answers and source chunks.' }
+  },
+  {
+    path: 'agents',
+    component: AgentWorkflowComponent,
+    data: { title: 'Agent Decisions', subtitle: 'Review agent steps and decisions for each generated answer.' }
   },
   {
     path: 'tokens',

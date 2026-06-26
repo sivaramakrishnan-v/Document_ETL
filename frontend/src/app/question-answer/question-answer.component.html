@@ -6,7 +6,7 @@
     </div>
   </div>
 
-  <div class="chat-container">
+  <div class="chat-container" #chatViewport>
     <div class="conversation" *ngIf="messages.length > 0; else emptyState">
       <div class="message-row" *ngFor="let msg of messages" [ngClass]="msg.role">
         <div class="message-bubble">
@@ -20,7 +20,10 @@
                 <span class="metadata-item">{{ msg.response.citations.length || 0 }} Citations</span>
                 <span class="metadata-item">{{ msg.response.retrievedChunks?.length || 0 }} Chunks</span>
               </div>
-              <a class="evidence-link" [routerLink]="['/results']" [queryParams]="{ threadId: msg.response.threadId, checkpointId: msg.response.checkpointId }">View Full Evidence →</a>
+              <div class="message-links">
+                <a class="evidence-link" [routerLink]="['/agents']" [queryParams]="{ threadId: msg.response.threadId, checkpointId: msg.response.checkpointId }">Agent Trace →</a>
+                <a class="evidence-link" [routerLink]="['/results']" [queryParams]="{ threadId: msg.response.threadId, checkpointId: msg.response.checkpointId }">View Full Evidence →</a>
+              </div>
             </div>
 
           </ng-container>

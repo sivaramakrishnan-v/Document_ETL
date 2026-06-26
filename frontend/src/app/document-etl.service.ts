@@ -62,6 +62,8 @@ export interface RagCheckpoint {
   retrievedContextSnapshot?: string[];
   generatedAnswer?: string;
   citations?: string[];
+  agentVisited?: string[];
+  agentFeedback?: string[];
   validationStatus?: string;
   groundednessScore?: number;
   citationCoverageScore?: number;

@@ -18,6 +18,8 @@ public class RagCheckpointResponse {
     private List<String> retrievedContextSnapshot;
     private String generatedAnswer;
     private List<String> citations;
+    private List<String> agentVisited;
+    private List<String> agentFeedback;
     private String validationStatus;
     private Double groundednessScore;
     private Double citationCoverageScore;
@@ -125,6 +127,22 @@ public class RagCheckpointResponse {
 
     public void setCitations(List<String> citations) {
         this.citations = citations;
+    }
+
+    public List<String> getAgentVisited() {
+        return agentVisited;
+    }
+
+    public void setAgentVisited(List<String> agentVisited) {
+        this.agentVisited = agentVisited;
+    }
+
+    public List<String> getAgentFeedback() {
+        return agentFeedback;
+    }
+
+    public void setAgentFeedback(List<String> agentFeedback) {
+        this.agentFeedback = agentFeedback;
     }
 
     public String getValidationStatus() {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AskQuestionResponse, DocumentEtlService, RagCheckpoint } from '../document-etl.service';
@@ -18,7 +18,9 @@ interface ChatMessage {
   templateUrl: './question-answer.component.html',
   styleUrls: ['./question-answer.component.css']
 })
-export class QuestionAnswerComponent implements OnInit {
+export class QuestionAnswerComponent implements OnInit, AfterViewChecked {
+  @ViewChild('chatViewport') private chatViewport?: ElementRef<HTMLDivElement>;
+
   question = '';
   isAsking = false;
   errorMessage = '';
@@ -27,6 +29,7 @@ export class QuestionAnswerComponent implements OnInit {
   threadId: string | null = null;
 
   private readonly threadIdStorageKey = 'chatThreadId';
+  private shouldAutoScroll = false;
 
   suggestedQuestions = [
     'What is an ETF?',
@@ -39,6 +42,13 @@ export class QuestionAnswerComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadInitialData();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldAutoScroll) {
+      this.scrollChatToBottom();
+      this.shouldAutoScroll = false;
+    }
   }
 
   loadInitialData(): void {
@@ -54,6 +64,7 @@ export class QuestionAnswerComponent implements OnInit {
         this.totalDocuments = documents.length;
         if (history && history.length > 0) {
           this.messages = this.mapHistoryToMessages(history as RagCheckpoint[]);
+          this.queueScrollToBottom();
         }
       },
       error: (err) => {
@@ -74,6 +85,7 @@ export class QuestionAnswerComponent implements OnInit {
     this.errorMessage = '';
     this.messages.push({ role: 'user', text: askedQuestion });
     this.question = '';
+    this.queueScrollToBottom();
 
     this.documentEtlService.askQuestion(askedQuestion, this.threadId).subscribe({
       next: (response) => {
@@ -87,10 +99,12 @@ export class QuestionAnswerComponent implements OnInit {
           localStorage.setItem(this.threadIdStorageKey, this.threadId);
         }
         this.isAsking = false;
+        this.queueScrollToBottom();
       },
       error: () => {
         this.errorMessage = 'Unable to ask question. Make sure the Spring Boot API is running and documents are indexed.';
         this.isAsking = false;
+        this.queueScrollToBottom();
       }
     });
   }
@@ -101,6 +115,7 @@ export class QuestionAnswerComponent implements OnInit {
     this.question = '';
     this.errorMessage = '';
     localStorage.removeItem(this.threadIdStorageKey);
+    this.queueScrollToBottom();
   }
 
   populateQuestion(question: string): void {
@@ -127,5 +142,17 @@ export class QuestionAnswerComponent implements OnInit {
       }
     });
     return chatMessages;
+  }
+
+  private queueScrollToBottom(): void {
+    this.shouldAutoScroll = true;
+  }
+
+  private scrollChatToBottom(): void {
+    const viewport = this.chatViewport?.nativeElement;
+    if (!viewport) {
+      return;
+    }
+    viewport.scrollTop = viewport.scrollHeight;
   }
 }

@@ -29,24 +29,24 @@
 }
 
 .chat-container {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: min(520px, calc(100vh - 244px));
+  height: clamp(420px, calc(100vh - 236px), 552px);
+  overflow-y: auto;
   padding: var(--space-4);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-xl);
   background: var(--card);
   box-shadow: var(--shadow-card);
+  scroll-behavior: smooth;
 }
 
 .conversation {
   display: flex;
   flex-direction: column;
   gap: var(--space-3); /* 12px */
-  overflow-y: auto;
-  flex-grow: 1;
   padding-right: var(--space-2); /* For scrollbar */
 }
 
@@ -186,6 +186,13 @@
   gap: var(--space-3); /* 12px */
 }
 
+.message-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
 .metadata-item {
   font-weight: var(--font-medium);
   color: var(--muted);
@@ -212,7 +219,7 @@
   justify-content: center;
   text-align: center;
   height: 100%;
-  min-height: 180px;
+  min-height: 100%;
 }
 
 .empty-state-title {
@@ -289,7 +296,7 @@
 
   .chat-container {
     padding: var(--space-3);
-    max-height: none;
+    height: clamp(360px, calc(100vh - 220px), 560px);
   }
 }
 

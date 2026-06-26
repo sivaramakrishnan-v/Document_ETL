@@ -84,6 +84,11 @@ public class AgenticRagService {
                 state.citations(),
                 state.selectedEvidence()
         );
+        ragWorkflowCheckpointService.markAgentTrace(
+                checkpoint.getCheckpointId(),
+                state.visited(),
+                state.feedback()
+        );
         ragWorkflowCheckpointService.markGroundingScored(checkpoint.getCheckpointId(), grounding);
 
         return new AgenticAskResponse(

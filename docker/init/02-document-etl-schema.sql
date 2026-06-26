@@ -220,6 +220,8 @@ CREATE TABLE IF NOT EXISTS document_etl.rag_workflow_checkpoint (
     retrieved_context_snapshot JSONB,
     generated_answer TEXT,
     citations JSONB,
+    agent_visited JSONB,
+    agent_feedback JSONB,
     validation_status VARCHAR(50),
     groundedness_score NUMERIC(5,4),
     citation_coverage_score NUMERIC(5,4),

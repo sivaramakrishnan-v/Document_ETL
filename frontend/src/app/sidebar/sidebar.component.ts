@@ -15,8 +15,9 @@ export class SidebarComponent {
     { number: '02', icon: 'DO', label: 'Documents', route: '/documents' },
     { number: '03', icon: 'QA', label: 'Ask Question', route: '/ask' },
     { number: '04', icon: 'CI', label: 'Results / Citations', route: '/results' },
-    { number: '05', icon: 'PI', label: 'Pipeline Status', route: '/pipeline' },
-    { number: '06', icon: 'TK', label: 'Token Usage', route: '/tokens' },
-    { number: '07', icon: 'OB', label: 'Observability', route: '/observability' }
+    { number: '05', icon: 'AG', label: 'Agent Decisions', route: '/agents' },
+    { number: '06', icon: 'PI', label: 'Pipeline Status', route: '/pipeline' },
+    { number: '07', icon: 'TK', label: 'Token Usage', route: '/tokens' },
+    { number: '08', icon: 'OB', label: 'Observability', route: '/observability' }
   ];
 }

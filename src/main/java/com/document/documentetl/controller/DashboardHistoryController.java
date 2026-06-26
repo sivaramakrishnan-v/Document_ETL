@@ -81,6 +81,8 @@ public class DashboardHistoryController {
         response.setRetrievedContextSnapshot(copyList(checkpoint.getRetrievedContextSnapshot()));
         response.setGeneratedAnswer(checkpoint.getGeneratedAnswer());
         response.setCitations(copyList(checkpoint.getCitations()));
+        response.setAgentVisited(copyList(checkpoint.getAgentVisited()));
+        response.setAgentFeedback(copyList(checkpoint.getAgentFeedback()));
         response.setValidationStatus(checkpoint.getValidationStatus());
         response.setGroundednessScore(checkpoint.getGroundednessScore());
         response.setCitationCoverageScore(checkpoint.getCitationCoverageScore());

@@ -1,58 +1,122 @@
-<section class="card">
-  <div class="card-header">
-    <div>
-      <h2>Agent Workflow</h2>
-      <p>Persisted workflow checkpoint information exposed by backend services.</p>
+<section class="hero-card">
+  <div>
+    <span class="eyebrow">Agent Trace</span>
+    <h2>Agent Decisions Per Answer</h2>
+    <p>Review the agent steps, route decisions, retrieval choices, validation status, and grounding outcome for each generated response.</p>
+  </div>
+  <button class="secondary-button" type="button" (click)="loadWorkflow()" [disabled]="isLoading">
+    {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+  </button>
+</section>
+
+<p class="notice">{{ message }}</p>
+
+<div class="page-grid two-column">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Answer Runs</h3>
+        <p>{{ checkpoints.length }} checkpoint{{ checkpoints.length === 1 ? '' : 's' }} loaded</p>
+      </div>
     </div>
-    <button class="secondary-button" type="button" (click)="loadWorkflow()" [disabled]="isLoading">
-      {{ isLoading ? 'Refreshing...' : 'Refresh' }}
-    </button>
-  </div>
-  <p class="notice">{{ message }}</p>
 
-  <div class="workflow-grid" *ngIf="selectedCheckpoint; else noWorkflow">
-    <article>
-      <small>Question Received</small>
-      <strong>{{ selectedCheckpoint.userQuery || selectedCheckpoint.normalizedQuery || 'Not available from backend yet' }}</strong>
-    </article>
-    <article>
-      <small>Retrieval</small>
-      <strong>{{ selectedCheckpoint.retrievalStrategy || 'Not available from backend yet' }}</strong>
-    </article>
-    <article>
-      <small>Answer Generation</small>
-      <strong>{{ selectedCheckpoint.generatedAnswer ? 'Answer generated' : 'Not available from backend yet' }}</strong>
-    </article>
-    <article>
-      <small>Validation</small>
-      <strong>{{ selectedCheckpoint.validationStatus || 'Not available from backend yet' }}</strong>
-    </article>
-    <article>
-      <small>Grounding</small>
-      <strong>{{ selectedCheckpoint.groundingStatus || 'Not available from backend yet' }}</strong>
-    </article>
-    <article>
-      <small>Completed</small>
-      <strong>{{ selectedCheckpoint.workflowStatus || 'Not available from backend yet' }}</strong>
-    </article>
-  </div>
+    <div class="record-list" *ngIf="checkpoints.length > 0; else noHistory">
+      <button
+        class="record-item"
+        type="button"
+        *ngFor="let checkpoint of checkpoints"
+        [ngClass]="{ selected: checkpoint.checkpointId === selectedCheckpoint?.checkpointId }"
+        (click)="selectCheckpoint(checkpoint)"
+      >
+        <div class="record-main">
+          <strong>{{ recordTitle(checkpoint) }}</strong>
+          <small>{{ formatDate(checkpoint.createdAt) }}</small>
+        </div>
+        <div class="record-status">
+          <span class="status-badge" [ngClass]="statusClass(checkpoint.workflowStatus)">
+            {{ displayValue(checkpoint.workflowStatus) }}
+          </span>
+          <span>{{ checkpoint.agentVisited?.length || 0 }} trace step{{ checkpoint.agentVisited?.length === 1 ? '' : 's' }}</span>
+        </div>
+      </button>
+    </div>
 
-  <ng-template #noWorkflow>
-    <p class="empty-state">Agent workflow details are not available from backend yet.</p>
+    <ng-template #noHistory>
+      <div class="empty-state">
+        <strong>No answer runs found</strong>
+        <p>Ask a question first to create an agent checkpoint.</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <ng-container *ngIf="selectedCheckpoint; else noSelection">
+    <section class="card detail-card">
+      <div class="card-header">
+        <div>
+          <h3>Selected Answer</h3>
+          <p>{{ formatDate(selectedCheckpoint.createdAt) }}</p>
+        </div>
+        <a class="secondary-link" [routerLink]="['/results']" [queryParams]="{ threadId: selectedCheckpoint.threadId, checkpointId: selectedCheckpoint.checkpointId }">
+          Evidence
+        </a>
+      </div>
+
+      <article class="question-card">
+        <span class="section-label">Question</span>
+        <h4>{{ recordTitle(selectedCheckpoint) }}</h4>
+      </article>
+
+      <div class="metric-row">
+        <div>
+          <span>Workflow</span>
+          <b class="status-badge" [ngClass]="statusClass(selectedCheckpoint.workflowStatus)">{{ displayValue(selectedCheckpoint.workflowStatus) }}</b>
+        </div>
+        <div>
+          <span>Validation</span>
+          <b class="status-badge" [ngClass]="statusClass(selectedCheckpoint.validationStatus)">{{ displayValue(selectedCheckpoint.validationStatus) }}</b>
+        </div>
+        <div>
+          <span>Grounding</span>
+          <b class="status-badge" [ngClass]="statusClass(selectedCheckpoint.groundingStatus)">{{ displayValue(selectedCheckpoint.groundingStatus) }}</b>
+        </div>
+        <div>
+          <span>Retrieval</span>
+          <b>{{ displayValue(selectedCheckpoint.retrievalStrategy) }}</b>
+        </div>
+      </div>
+
+      <div class="timeline" *ngIf="decisions().length > 0; else noTrace">
+        <article class="timeline-item" *ngFor="let step of decisions(); let index = index" [ngClass]="step.status">
+          <div class="step-index">{{ index + 1 }}</div>
+          <div class="step-body">
+            <div class="step-head">
+              <div>
+                <span class="section-label">{{ step.node }}</span>
+                <h4>{{ step.agent }}</h4>
+              </div>
+              <span class="status-badge" [ngClass]="step.status">{{ step.status }}</span>
+            </div>
+            <p class="decision">{{ step.decision }}</p>
+            <p class="detail">{{ step.detail }}</p>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noTrace>
+        <div class="empty-state">
+          <strong>No agent trace persisted</strong>
+          <p>This checkpoint was created before agent trace persistence was available.</p>
+        </div>
+      </ng-template>
+    </section>
+  </ng-container>
+
+  <ng-template #noSelection>
+    <section class="card">
+      <div class="empty-state">
+        <strong>No selected answer</strong>
+        <p>Select a checkpoint to review the agent decisions used to produce the response.</p>
+      </div>
+    </section>
   </ng-template>
-</section>
-
-<section class="card">
-  <div class="card-header compact">
-    <h3>Recent Workflow Checkpoints</h3>
-  </div>
-  <div class="history-list" *ngIf="checkpoints.length > 0; else noHistory">
-    <button class="history-item" type="button" *ngFor="let checkpoint of checkpoints" (click)="selectedCheckpoint = checkpoint">
-      <strong>{{ checkpoint.userQuery || checkpoint.checkpointId }}</strong>
-      <span>{{ checkpoint.workflowStatus || 'Unknown' }} | {{ checkpoint.createdAt || 'No timestamp' }}</span>
-    </button>
-  </div>
-  <ng-template #noHistory>
-    <p class="empty-state">No checkpoint history found.</p>
-  </ng-template>
-</section>
+</div>

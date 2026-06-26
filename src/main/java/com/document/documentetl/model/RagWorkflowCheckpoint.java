@@ -59,6 +59,14 @@ public class RagWorkflowCheckpoint {
     @Column(name = "citations", columnDefinition = "jsonb")
     private List<String> citations = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "agent_visited", columnDefinition = "jsonb")
+    private List<String> agentVisited = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "agent_feedback", columnDefinition = "jsonb")
+    private List<String> agentFeedback = new ArrayList<>();
+
     @Column(name = "validation_status", length = 50)
     private String validationStatus;
 
@@ -200,6 +208,22 @@ public class RagWorkflowCheckpoint {
 
     public void setCitations(List<String> citations) {
         this.citations = citations;
+    }
+
+    public List<String> getAgentVisited() {
+        return agentVisited;
+    }
+
+    public void setAgentVisited(List<String> agentVisited) {
+        this.agentVisited = agentVisited;
+    }
+
+    public List<String> getAgentFeedback() {
+        return agentFeedback;
+    }
+
+    public void setAgentFeedback(List<String> agentFeedback) {
+        this.agentFeedback = agentFeedback;
     }
 
     public String getValidationStatus() {
