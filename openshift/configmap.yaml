@@ -5,7 +5,7 @@ metadata:
   labels:
     app: documentetl
 data:
-  SPRING_DATASOURCE_URL: jdbc:postgresql://pgvector-db:5432/ai_advisor_db?currentSchema=knowledge,public
+  SPRING_DATASOURCE_URL: jdbc:postgresql://pgvector-db:5432/ai_advisor_db?currentSchema=document_etl,public
   SPRING_DATASOURCE_USERNAME: advisor_user
   SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   SPRING_CLOUD_GCP_CREDENTIALS_LOCATION: file:/var/run/secrets/documentetl-gcp/gcp-vertex-key.json

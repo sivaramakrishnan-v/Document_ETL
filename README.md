@@ -116,7 +116,20 @@ The Spring Boot backend exposes a set of REST APIs to power the frontend.
 | `GET` | `/api/etl/v2/status` | Returns detailed status of the document processing pipeline. |
 | `GET` | `/api/tokens/summary` | Provides a summary of token usage across the application. |
 
-## 9. Security Notes
+## 9. Chat Answer Behavior
+
+The `/api/chat/agent/ask` endpoint generates grounded answers from retrieved document evidence. The answer-generation prompt is tuned for a modern assistant style while preserving strict grounding:
+
+- Short factual questions receive brief, direct answers.
+- Comparison questions start with the primary similarity, explain the most important differences, and end with a concise conclusion.
+- Explain, why, how, analyze, and walk-through questions may include more detail when supported by evidence.
+- Detailed or comprehensive requests receive longer structured answers when the uploaded documents contain enough information.
+- Answers use only retrieved evidence and clearly state when the uploaded documents do not contain enough information.
+- User-facing answers avoid internal document IDs, chunk IDs, retrieval metadata, and inline citation tokens.
+
+Retrieval strategy, grounding checks, validation, and backend citation data are handled separately from the answer-generation wording prompt.
+
+## 10. Security Notes
 
 - Do not commit `.env` files, service account keys, or any other sensitive credentials to version control.
 - Use the provided `.gitignore` file to prevent accidental exposure of secrets.

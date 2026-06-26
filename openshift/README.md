@@ -137,13 +137,13 @@ What it teaches:
 Example:
 
 ```yaml
-SPRING_DATASOURCE_URL: jdbc:postgresql://pgvector-db:5432/ai_advisor_db?currentSchema=knowledge,public
+SPRING_DATASOURCE_URL: jdbc:postgresql://pgvector-db:5432/ai_advisor_db?currentSchema=document_etl,public
 ```
 
 This overrides:
 
 ```properties
-spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_advisor_db?currentSchema=knowledge,public}
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_advisor_db?currentSchema=document_etl,public}
 ```
 
 Interview answer:

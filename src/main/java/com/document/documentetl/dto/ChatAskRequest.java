@@ -2,6 +2,8 @@ package com.document.documentetl.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 
+import java.util.List;
+
 public class ChatAskRequest {
 
     @JsonAlias({"question", "query"})
@@ -9,6 +11,8 @@ public class ChatAskRequest {
     private String goldenAnswer;
     @JsonAlias({"threadId", "thread_id"})
     private String threadId;
+    @JsonAlias({"documentIds", "document_ids"})
+    private List<Long> documentIds;
 
     public ChatAskRequest() {
     }
@@ -44,5 +48,13 @@ public class ChatAskRequest {
 
     public void setThreadId(String threadId) {
         this.threadId = threadId;
+    }
+
+    public List<Long> getDocumentIds() {
+        return documentIds;
+    }
+
+    public void setDocumentIds(List<Long> documentIds) {
+        this.documentIds = documentIds;
     }
 }

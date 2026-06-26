@@ -16,6 +16,11 @@ spring.datasource.username=${SPRING_DATASOURCE_USERNAME:your_db_user}
 spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:your_db_password}
 spring.datasource.driver-class-name=org.postgresql.Driver
 
+# Spring Session JDBC tables are required when spring-session-jdbc is on the classpath.
+spring.session.jdbc.initialize-schema=${SPRING_SESSION_JDBC_INITIALIZE_SCHEMA:always}
+spring.session.jdbc.schema=classpath:spring-session-postgresql.sql
+spring.session.jdbc.table-name=SPRING_SESSION
+
 # JPA / Hibernate
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=none
@@ -66,6 +71,15 @@ app.rag.generation.max-retries=${APP_RAG_GENERATION_MAX_RETRIES:2}
 app.rag.evaluation.model-name=${APP_RAG_EVALUATION_MODEL:gemini-2.5-pro}
 app.rag.evaluation.temperature=${APP_RAG_EVALUATION_TEMPERATURE:0.0}
 app.rag.evaluation.max-retries=${APP_RAG_EVALUATION_MAX_RETRIES:2}
+
+agent.rag.max-tool-calls=${AGENT_RAG_MAX_TOOL_CALLS:4}
+agent.rag.max-evidence=${AGENT_RAG_MAX_EVIDENCE:12}
+agent.rag.max-retrieval-attempts=${AGENT_RAG_MAX_RETRIEVAL_ATTEMPTS:2}
+agent.rag.per-tool-limit=${AGENT_RAG_PER_TOOL_LIMIT:10}
+agent.rag.evidence-snippet-char-limit=${AGENT_RAG_EVIDENCE_SNIPPET_CHAR_LIMIT:1200}
+agent.rag.mmr-candidate-k=${AGENT_RAG_MMR_CANDIDATE_K:30}
+agent.rag.mmr-final-k=${AGENT_RAG_MMR_FINAL_K:10}
+agent.rag.mmr-lambda=${AGENT_RAG_MMR_LAMBDA:0.7}
 
 app.evaluation.bigquery.enabled=${APP_EVALUATION_BIGQUERY_ENABLED:true}
 app.evaluation.bigquery.project-id=${APP_EVALUATION_BIGQUERY_PROJECT_ID:${spring.ai.vertex.ai.gemini.project-id}}

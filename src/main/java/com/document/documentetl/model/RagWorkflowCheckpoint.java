@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "rag_workflow_checkpoint", schema = "knowledge")
+@Table(name = "rag_workflow_checkpoint", schema = "document_etl")
 public class RagWorkflowCheckpoint {
 
     @Id

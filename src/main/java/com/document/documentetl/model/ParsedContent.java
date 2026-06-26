@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "parsed_content", schema = "knowledge")
+@Table(name = "parsed_content", schema = "document_etl")
 public class ParsedContent {
 
     @Id

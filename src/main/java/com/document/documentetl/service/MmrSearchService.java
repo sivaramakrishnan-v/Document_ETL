@@ -19,4 +19,8 @@ public class MmrSearchService {
     public List<SearchResult> search(String query, int limit) {
         return searchOrchestrator.retrieve(query, limit, MMR_STRATEGY_TYPE);
     }
+
+    public List<SearchResult> search(String query, int limit, List<Long> documentIds) {
+        return searchOrchestrator.retrieve(query, limit, MMR_STRATEGY_TYPE, documentIds);
+    }
 }

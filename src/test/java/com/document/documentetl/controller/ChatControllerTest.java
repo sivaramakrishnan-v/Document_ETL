@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,7 +53,7 @@ class ChatControllerTest {
         response.setUnsupportedClaimsCount(0);
         response.setGroundingStatus("GROUNDED");
 
-        when(agenticRagService.ask(anyString(), eq("thread-123"))).thenReturn(response);
+        when(agenticRagService.ask(anyString(), eq("thread-123"), isNull())).thenReturn(response);
 
         mockMvc.perform(post("/api/chat/agent/ask?threadId=thread-123")
                         .contentType(MediaType.APPLICATION_JSON)

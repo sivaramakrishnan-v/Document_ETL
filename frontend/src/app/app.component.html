@@ -2,7 +2,7 @@
   <app-sidebar></app-sidebar>
 
   <main class="main">
-    <header class="topbar">
+    <header class="topbar" [class.compact]="compactHeader">
       <div>
         <p class="eyebrow">{{ pageSubtitle }}</p>
         <h1>{{ pageTitle }}</h1>

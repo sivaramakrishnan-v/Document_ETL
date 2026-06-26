@@ -17,14 +17,14 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'ai_advisor_db')\gex
 */
 
 -- 1. INITIAL SCHEMA & EXTENSION SETUP
-CREATE SCHEMA IF NOT EXISTS knowledge;
+CREATE SCHEMA IF NOT EXISTS document_etl;
 
 -- Enable the pgvector extension (required for AI embeddings)
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- 2. CORE TABLE CREATION
 -- Tracking local file uploads
-CREATE TABLE IF NOT EXISTS knowledge.staged_documents (
+CREATE TABLE IF NOT EXISTS document_etl.staged_documents (
     document_id VARCHAR(64) PRIMARY KEY,
     file_name TEXT NOT NULL,
     file_path TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS knowledge.staged_documents (
 );
 
 -- Storing raw text after Tika parsing
-CREATE TABLE IF NOT EXISTS knowledge.parsed_content (
+CREATE TABLE IF NOT EXISTS document_etl.parsed_content (
     content_id UUID PRIMARY KEY,
     document_id VARCHAR(64) NOT NULL,
     raw_text TEXT,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS knowledge.parsed_content (
 );
 
 -- Storing text chunks and their mathematical vectors
-CREATE TABLE IF NOT EXISTS knowledge.document_chunks (
+CREATE TABLE IF NOT EXISTS document_etl.document_chunks (
     chunk_id UUID PRIMARY KEY,
     document_id VARCHAR(64),
     content_id UUID,
@@ -55,37 +55,37 @@ CREATE TABLE IF NOT EXISTS knowledge.document_chunks (
 );
 
 -- 3. PERMISSIONS
-GRANT ALL PRIVILEGES ON SCHEMA knowledge TO advisor_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA knowledge TO advisor_user;
+GRANT ALL PRIVILEGES ON SCHEMA document_etl TO advisor_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA document_etl TO advisor_user;
 
 -- 4. THE "SMART UPDATE" UPGRADE (IDEMPOTENCY & VERSIONING)
 -- Upgrade Staged Documents
-ALTER TABLE knowledge.staged_documents 
+ALTER TABLE document_etl.staged_documents 
 ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64),
 ADD COLUMN IF NOT EXISTS last_modified_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS version_number INTEGER DEFAULT 1;
 
 -- Upgrade Parsed Content
-ALTER TABLE knowledge.parsed_content 
+ALTER TABLE document_etl.parsed_content 
 ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64),
 ADD COLUMN IF NOT EXISTS version_number INTEGER DEFAULT 1;
 
 -- Upgrade Document Chunks
-ALTER TABLE knowledge.document_chunks 
+ALTER TABLE document_etl.document_chunks 
 ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64);
 
 -- 5. PERFORMANCE INDEXES
 CREATE INDEX IF NOT EXISTS idx_staged_doc_version 
-ON knowledge.staged_documents (document_id, content_hash);
+ON document_etl.staged_documents (document_id, content_hash);
 
 CREATE INDEX IF NOT EXISTS idx_parsed_content_version 
-ON knowledge.parsed_content (document_id, content_hash);
+ON document_etl.parsed_content (document_id, content_hash);
 
 CREATE INDEX IF NOT EXISTS idx_chunks_version 
-ON knowledge.document_chunks (document_id, content_hash);
+ON document_etl.document_chunks (document_id, content_hash);
 
 -- 6. MLFLOW TRACE BRIDGE PERSISTENCE
-CREATE TABLE IF NOT EXISTS knowledge.mlflow_trace_bridge_events (
+CREATE TABLE IF NOT EXISTS document_etl.mlflow_trace_bridge_events (
     event_id VARCHAR(36) PRIMARY KEY,
     event_type VARCHAR(64) NOT NULL,
     event_time_epoch_ms BIGINT NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS knowledge.mlflow_trace_bridge_events (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS knowledge.mlflow_trace_bridge_documents (
+CREATE TABLE IF NOT EXISTS document_etl.mlflow_trace_bridge_documents (
     id BIGSERIAL PRIMARY KEY,
     event_id VARCHAR(36) NOT NULL,
     doc_id BIGINT,
@@ -112,26 +112,26 @@ CREATE TABLE IF NOT EXISTS knowledge.mlflow_trace_bridge_documents (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_mlflow_trace_bridge_docs_event
         FOREIGN KEY (event_id)
-        REFERENCES knowledge.mlflow_trace_bridge_events (event_id)
+        REFERENCES document_etl.mlflow_trace_bridge_events (event_id)
         ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_mlflow_trace_bridge_events_run
-ON knowledge.mlflow_trace_bridge_events (run_id, event_time_epoch_ms DESC);
+ON document_etl.mlflow_trace_bridge_events (run_id, event_time_epoch_ms DESC);
 
 CREATE INDEX IF NOT EXISTS idx_mlflow_trace_bridge_events_ingested
-ON knowledge.mlflow_trace_bridge_events (ingested, event_time_epoch_ms ASC);
+ON document_etl.mlflow_trace_bridge_events (ingested, event_time_epoch_ms ASC);
 
 CREATE INDEX IF NOT EXISTS idx_mlflow_trace_bridge_docs_event
-ON knowledge.mlflow_trace_bridge_documents (event_id, rank_order);
+ON document_etl.mlflow_trace_bridge_documents (event_id, rank_order);
 
 -- 6.1 PERMISSIONS FOR TRACE BRIDGE TABLES
-GRANT ALL PRIVILEGES ON TABLE knowledge.mlflow_trace_bridge_events TO advisor_user;
-GRANT ALL PRIVILEGES ON TABLE knowledge.mlflow_trace_bridge_documents TO advisor_user;
-GRANT USAGE, SELECT ON SEQUENCE knowledge.mlflow_trace_bridge_documents_id_seq TO advisor_user;
+GRANT ALL PRIVILEGES ON TABLE document_etl.mlflow_trace_bridge_events TO advisor_user;
+GRANT ALL PRIVILEGES ON TABLE document_etl.mlflow_trace_bridge_documents TO advisor_user;
+GRANT USAGE, SELECT ON SEQUENCE document_etl.mlflow_trace_bridge_documents_id_seq TO advisor_user;
 
 -- 6.2 TOKEN USAGE TRACKING
-CREATE TABLE IF NOT EXISTS knowledge.token_usage_events (
+CREATE TABLE IF NOT EXISTS document_etl.token_usage_events (
     id BIGSERIAL PRIMARY KEY,
     run_id VARCHAR(100),
     operation_name VARCHAR(128) NOT NULL,
@@ -148,25 +148,25 @@ CREATE TABLE IF NOT EXISTS knowledge.token_usage_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_created_at
-ON knowledge.token_usage_events (created_at DESC);
+ON document_etl.token_usage_events (created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_operation
-ON knowledge.token_usage_events (operation_name);
+ON document_etl.token_usage_events (operation_name);
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_status
-ON knowledge.token_usage_events (status);
+ON document_etl.token_usage_events (status);
 
-ALTER TABLE knowledge.token_usage_events
+ALTER TABLE document_etl.token_usage_events
 ADD COLUMN IF NOT EXISTS run_id VARCHAR(100);
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_run_id
-ON knowledge.token_usage_events (run_id);
+ON document_etl.token_usage_events (run_id);
 
-GRANT ALL PRIVILEGES ON TABLE knowledge.token_usage_events TO advisor_user;
-GRANT USAGE, SELECT ON SEQUENCE knowledge.token_usage_events_id_seq TO advisor_user;
+GRANT ALL PRIVILEGES ON TABLE document_etl.token_usage_events TO advisor_user;
+GRANT USAGE, SELECT ON SEQUENCE document_etl.token_usage_events_id_seq TO advisor_user;
 
 -- 6.3 RAG WORKFLOW CHECKPOINT PERSISTENCE
-CREATE TABLE IF NOT EXISTS knowledge.rag_workflow_checkpoint (
+CREATE TABLE IF NOT EXISTS document_etl.rag_workflow_checkpoint (
     checkpoint_id UUID PRIMARY KEY,
     thread_id VARCHAR(100) NOT NULL,
     checkpoint_namespace VARCHAR(100) NOT NULL DEFAULT 'default',
@@ -190,22 +190,22 @@ CREATE TABLE IF NOT EXISTS knowledge.rag_workflow_checkpoint (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE knowledge.rag_workflow_checkpoint
+ALTER TABLE document_etl.rag_workflow_checkpoint
 ADD COLUMN IF NOT EXISTS groundedness_score NUMERIC(5,4),
 ADD COLUMN IF NOT EXISTS citation_coverage_score NUMERIC(5,4),
 ADD COLUMN IF NOT EXISTS unsupported_claims_count INTEGER,
 ADD COLUMN IF NOT EXISTS grounding_status VARCHAR(50);
 
 CREATE INDEX IF NOT EXISTS idx_rag_checkpoint_thread_id
-ON knowledge.rag_workflow_checkpoint(thread_id);
+ON document_etl.rag_workflow_checkpoint(thread_id);
 
 CREATE INDEX IF NOT EXISTS idx_rag_checkpoint_thread_created
-ON knowledge.rag_workflow_checkpoint(thread_id, created_at DESC);
+ON document_etl.rag_workflow_checkpoint(thread_id, created_at DESC);
 
-GRANT ALL PRIVILEGES ON TABLE knowledge.rag_workflow_checkpoint TO advisor_user;
+GRANT ALL PRIVILEGES ON TABLE document_etl.rag_workflow_checkpoint TO advisor_user;
 
 -- 7. VERIFICATION QUERY
 SELECT table_name, column_name, data_type 
 FROM information_schema.columns 
-WHERE table_schema = 'knowledge' 
+WHERE table_schema = 'document_etl' 
 ORDER BY table_name, ordinal_position;

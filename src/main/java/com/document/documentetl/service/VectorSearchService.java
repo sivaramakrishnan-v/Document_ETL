@@ -4,6 +4,8 @@ import com.document.documentetl.dto.SearchResult;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,8 @@ import java.util.StringJoiner;
 
 @Service("vector")
 public class VectorSearchService implements RetrievalStrategy {
+
+    private static final Logger log = LoggerFactory.getLogger(VectorSearchService.class);
 
     private static final String VECTOR_SEARCH_SQL = """
             SELECT chunk.chunk_id::text AS chunk_id,
@@ -44,7 +48,12 @@ public class VectorSearchService implements RetrievalStrategy {
 
     @Override
     public List<SearchResult> retrieve(String query, int limit) {
-        return retrieveCandidates(query, limit).stream()
+        return retrieve(query, limit, null);
+    }
+
+    @Override
+    public List<SearchResult> retrieve(String query, int limit, List<Long> documentIds) {
+        return retrieveCandidates(query, limit, documentIds).stream()
                 .map(candidate -> new SearchResult(
                         candidate.getChunkText(),
                         candidate.getDocumentId(),
@@ -55,19 +64,35 @@ public class VectorSearchService implements RetrievalStrategy {
     }
 
     public List<CandidateChunk> retrieveCandidates(String query, int limit) {
+        return retrieveCandidates(query, limit, null);
+    }
+
+    public List<CandidateChunk> retrieveCandidates(String query, int limit, List<Long> documentIds) {
         float[] queryEmbedding = embedQuery(query);
-        return retrieveCandidates(queryEmbedding, limit);
+        return retrieveCandidates(queryEmbedding, limit, documentIds);
     }
 
     public List<CandidateChunk> retrieveCandidates(float[] queryEmbedding, int limit) {
+        return retrieveCandidates(queryEmbedding, limit, null);
+    }
+
+    public List<CandidateChunk> retrieveCandidates(float[] queryEmbedding, int limit, List<Long> documentIds) {
         validateLimit(limit);
         if (queryEmbedding == null || queryEmbedding.length == 0) {
             throw new IllegalStateException("Query embedding vector must not be empty");
         }
 
         String queryVector = toVectorLiteral(queryEmbedding);
-        return jdbcTemplate.query(
-                VECTOR_SEARCH_SQL,
+        List<Long> scope = normalizeDocumentIds(documentIds);
+        String sql = scope.isEmpty() ? VECTOR_SEARCH_SQL : scopedVectorSearchSql(scope.size());
+        List<Object> args = new ArrayList<>();
+        args.add(queryVector);
+        args.addAll(scope);
+        args.add(queryVector);
+        args.add(limit);
+
+        List<CandidateChunk> results = jdbcTemplate.query(
+                sql,
                 (rs, rowNum) -> new CandidateChunk(
                         rs.getString("chunk_id"),
                         rs.getString("chunk_text"),
@@ -76,10 +101,10 @@ public class VectorSearchService implements RetrievalStrategy {
                         rs.getDouble("similarity"),
                         parseVectorLiteral(rs.getString("embedding_text"))
                 ),
-                queryVector,
-                queryVector,
-                limit
+                args.toArray()
         );
+        log.info("Vector retrieval completed: documentScope={} resultCount={}", scope, results.size());
+        return results;
     }
 
     public float[] embedQuery(String query) {
@@ -103,6 +128,43 @@ public class VectorSearchService implements RetrievalStrategy {
         if (limit <= 0) {
             throw new IllegalArgumentException("limit must be greater than 0");
         }
+    }
+
+    private static List<Long> normalizeDocumentIds(List<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return List.of();
+        }
+        return documentIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+    }
+
+    private static String scopedVectorSearchSql(int scopeSize) {
+        return """
+                SELECT chunk.chunk_id::text AS chunk_id,
+                       chunk.chunk_text,
+                       chunk.document_id,
+                       chunk.chunk_index,
+                       (1 - (embedding.embedding <=> ?::vector)) AS similarity,
+                       embedding.embedding::text AS embedding_text
+                FROM document_etl.text_chunks chunk
+                JOIN document_etl.chunk_embeddings embedding
+                  ON embedding.chunk_id = chunk.chunk_id
+                 AND embedding.content_hash = chunk.content_hash
+                 AND embedding.embedding_status = 'COMPLETED'
+                JOIN document_etl.source_documents source
+                  ON source.document_id = chunk.document_id
+                 AND source.content_hash = chunk.content_hash
+                 AND source.status = 'COMPLETED'
+                WHERE chunk.document_id IN (%s)
+                ORDER BY embedding.embedding <=> ?::vector
+                LIMIT ?
+                """.formatted(placeholders(scopeSize));
+    }
+
+    private static String placeholders(int count) {
+        return String.join(",", java.util.Collections.nCopies(count, "?"));
     }
 
     private static Long toDocumentId(Object rawValue) {

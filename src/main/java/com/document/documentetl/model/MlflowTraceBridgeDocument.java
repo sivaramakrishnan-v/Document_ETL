@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "mlflow_trace_bridge_documents", schema = "knowledge")
+@Table(name = "mlflow_trace_bridge_documents", schema = "document_etl")
 public class MlflowTraceBridgeDocument {
 
     @Id

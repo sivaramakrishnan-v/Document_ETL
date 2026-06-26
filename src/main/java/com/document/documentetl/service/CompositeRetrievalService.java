@@ -29,6 +29,11 @@ public class CompositeRetrievalService implements RetrievalStrategy {
 
     @Override
     public List<SearchResult> retrieve(String query, int limit) {
+        return retrieve(query, limit, null);
+    }
+
+    @Override
+    public List<SearchResult> retrieve(String query, int limit, List<Long> documentIds) {
         log.info("action=COMPOSITE_RETRIEVAL state=STARTED queryLength={} requestedLimit={}",
                 queryLength(query), limit);
 
@@ -39,7 +44,7 @@ public class CompositeRetrievalService implements RetrievalStrategy {
 
         try {
             log.info("action=RRF_RETRIEVAL state=STARTED candidateLimit={}", RRF_CANDIDATE_LIMIT);
-            List<SearchResult> rrfCandidates = rrfHybridRetrievalService.retrieve(query, RRF_CANDIDATE_LIMIT);
+            List<SearchResult> rrfCandidates = rrfHybridRetrievalService.retrieve(query, RRF_CANDIDATE_LIMIT, documentIds);
             log.info("action=RRF_RETRIEVAL state={} resultCount={}",
                     rrfCandidates.isEmpty() ? "EMPTY" : "COMPLETED", rrfCandidates.size());
             if (rrfCandidates.isEmpty()) {

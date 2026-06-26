@@ -24,5 +24,9 @@ public class HybridSearchTool implements RetrievalTool {
     public List<SearchResult> execute(String query, int limit) {
         return searchOrchestrator.retrieve(query, limit, "rrf-hybrid");
     }
-}
 
+    @Override
+    public List<SearchResult> execute(String query, int limit, List<Long> documentIds) {
+        return searchOrchestrator.retrieve(query, limit, "rrf-hybrid", documentIds);
+    }
+}

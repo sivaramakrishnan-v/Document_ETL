@@ -24,5 +24,9 @@ public class VectorSearchTool implements RetrievalTool {
     public List<SearchResult> execute(String query, int limit) {
         return searchOrchestrator.retrieve(query, limit, "vector");
     }
-}
 
+    @Override
+    public List<SearchResult> execute(String query, int limit, List<Long> documentIds) {
+        return searchOrchestrator.retrieve(query, limit, "vector", documentIds);
+    }
+}

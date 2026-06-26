@@ -28,6 +28,25 @@
   backdrop-filter: blur(10px);
 }
 
+.topbar.compact {
+  margin-bottom: var(--space-3);
+  padding: 12px 16px;
+  border-radius: var(--radius-xl);
+}
+
+.topbar.compact h1 {
+  font-size: var(--font-size-2xl);
+}
+
+.topbar.compact .eyebrow {
+  margin-bottom: 2px;
+  font-size: 10px;
+}
+
+.topbar.compact .meta-pill {
+  padding: 4px 9px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--indigo);

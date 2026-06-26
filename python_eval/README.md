@@ -53,8 +53,8 @@ MLflow Java SDK (`mlflow-client`) in this project does not expose GenAI tracing 
 
 1. `ChatService` logs the normal MLflow run for `chat.ask`.
 2. `MlflowTraceBridgeService` writes a bridge event to Postgres tables:
-   - `knowledge.mlflow_trace_bridge_events`
-   - `knowledge.mlflow_trace_bridge_documents`
+   - `document_etl.mlflow_trace_bridge_events`
+   - `document_etl.mlflow_trace_bridge_documents`
 3. Optional compatibility mirror can append JSONL to:
    - `python_eval/mlflow_trace_bridge.jsonl`
 4. Each event contains:
@@ -71,7 +71,7 @@ MLflow Java SDK (`mlflow-client`) in this project does not expose GenAI tracing 
 `eval_ragas.py`:
 
 1. Ingests new bridge events into MLflow traces (Python API).
-   - DB mode (default): reads events where `ingested=false` from `knowledge.mlflow_trace_bridge_events` and related rows from `knowledge.mlflow_trace_bridge_documents`, then marks successful rows as `ingested=true`.
+   - DB mode (default): reads events where `ingested=false` from `document_etl.mlflow_trace_bridge_events` and related rows from `document_etl.mlflow_trace_bridge_documents`, then marks successful rows as `ingested=true`.
    - File mode: reads `python_eval/mlflow_trace_bridge.jsonl` and de-duplicates with `.mlflow_trace_bridge_ingested_ids.txt`.
 2. Finds recent `chat.ask` and `chat.ask.review` runs in experiment `DocumentETL` that do not already have:
    - `faithfulness_score`

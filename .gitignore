@@ -66,8 +66,9 @@ ecs/documentetl-task.json
 # Local runtime artifacts
 python_eval/mlflow_trace_bridge.jsonl
 src/main/java.zip
-src/main/resources/data-*.csv
-src/main/resources/application.properties
+src/main/resources/documents/
+src/main/resources/*.properties
+src/main/resources/*.csv
 
 # OpenShift local secrets
 openshift/secret.yaml

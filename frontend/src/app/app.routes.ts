@@ -33,7 +33,7 @@ export const routes: Routes = [
   {
     path: 'ask',
     component: QuestionAnswerComponent,
-    data: { title: 'Ask Question', subtitle: 'Ask questions against uploaded and indexed documents.' }
+    data: { title: 'Ask Question', subtitle: 'Ask questions against uploaded and indexed documents.', compactHeader: true }
   },
   {
     path: 'results',

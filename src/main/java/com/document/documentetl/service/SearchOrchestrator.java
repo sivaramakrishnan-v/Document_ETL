@@ -20,6 +20,10 @@ public class SearchOrchestrator {
     }
 
     public List<SearchResult> retrieve(String query, int limit, String strategyType) {
+        return retrieve(query, limit, strategyType, null);
+    }
+
+    public List<SearchResult> retrieve(String query, int limit, String strategyType, List<Long> documentIds) {
         validateInputs(query, limit);
         String normalizedStrategyType = normalizeStrategyType(strategyType);
         RetrievalStrategy strategy = retrievalStrategies.get(normalizedStrategyType);
@@ -28,7 +32,7 @@ public class SearchOrchestrator {
                     "Unsupported strategyType '" + strategyType + "'. Supported values: " + supportedStrategies()
             );
         }
-        return strategy.retrieve(query, limit);
+        return strategy.retrieve(query, limit, documentIds);
     }
 
     private String normalizeStrategyType(String strategyType) {

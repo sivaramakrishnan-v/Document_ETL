@@ -24,5 +24,9 @@ public class KeywordSearchTool implements RetrievalTool {
     public List<SearchResult> execute(String query, int limit) {
         return keywordV2SearchService.retrieve(query, limit);
     }
-}
 
+    @Override
+    public List<SearchResult> execute(String query, int limit, List<Long> documentIds) {
+        return keywordV2SearchService.retrieve(query, limit, documentIds);
+    }
+}

@@ -87,7 +87,7 @@ public class LangChainConfig {
 
         PgVectorEmbeddingStore.DatasourceBuilder builder = PgVectorEmbeddingStore.datasourceBuilder()
                 .datasource(dataSource)
-                .table("knowledge.document_chunks")
+                .table("document_etl.document_chunks")
                 .dimension(768)
                 .createTable(false)
                 .dropTableFirst(false)

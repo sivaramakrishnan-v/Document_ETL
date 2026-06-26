@@ -14,6 +14,7 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 export class AppComponent {
   pageTitle = 'DocumentETL Console';
   pageSubtitle = 'Document Intelligence Platform';
+  compactHeader = false;
 
   constructor(
     private router: Router,
@@ -33,5 +34,6 @@ export class AppComponent {
 
     this.pageTitle = route.snapshot.data['title'] || 'DocumentETL Console';
     this.pageSubtitle = route.snapshot.data['subtitle'] || 'Document Intelligence Platform';
+    this.compactHeader = Boolean(route.snapshot.data['compactHeader']);
   }
 }

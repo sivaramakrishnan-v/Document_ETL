@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "mlflow_trace_bridge_events", schema = "knowledge")
+@Table(name = "mlflow_trace_bridge_events", schema = "document_etl")
 public class MlflowTraceBridgeEvent {
 
     @Id

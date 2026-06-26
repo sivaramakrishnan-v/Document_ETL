@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "document_chunks", schema = "knowledge")
+@Table(name = "document_chunks", schema = "document_etl")
 public class DocumentChunk {
 
     @Id

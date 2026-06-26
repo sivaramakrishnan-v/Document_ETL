@@ -1,9 +1,5 @@
 <section class="page-container">
   <div class="page-header">
-    <div>
-      <h1 class="page-title">Ask Question</h1>
-      <p class="page-subtitle">Ask against indexed documents using the agentic RAG service.</p>
-    </div>
     <div class="header-actions">
       <button class="secondary-button" (click)="startNewChat()" *ngIf="messages.length > 0">New Chat</button>
       <span class="status-badge" [class.neutral]="!totalDocuments">{{ totalDocuments > 0 ? totalDocuments + ' Documents Indexed' : 'Ready' }}</span>
@@ -27,12 +23,6 @@
               <a class="evidence-link" [routerLink]="['/results']" [queryParams]="{ threadId: msg.response.threadId, checkpointId: msg.response.checkpointId }">View Full Evidence →</a>
             </div>
 
-            <div class="sources-section" *ngIf="msg.response.retrievedDocuments && msg.response.retrievedDocuments.length > 0">
-              <h3 class="sources-title">Sources</h3>
-              <div class="sources-list">
-                <span class="source-chip" *ngFor="let docId of msg.response.retrievedDocuments">Document {{ docId }}</span>
-              </div>
-            </div>
           </ng-container>
         </div>
       </div>

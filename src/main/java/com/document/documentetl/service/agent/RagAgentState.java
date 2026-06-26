@@ -14,6 +14,7 @@ public class RagAgentState extends AgentState {
     public static final String THREAD_ID = "threadId";
     public static final String CHECKPOINT_ID = "checkpointId";
     public static final String USER_QUERY = "userQuery";
+    public static final String DOCUMENT_IDS = "documentIds";
     public static final String NORMALIZED_QUERY = "normalizedQuery";
     public static final String REWRITTEN_QUERY = "rewrittenQuery";
     public static final String PLAN = "plan";
@@ -34,6 +35,7 @@ public class RagAgentState extends AgentState {
             Map.entry(THREAD_ID, Channels.base(() -> "")),
             Map.entry(CHECKPOINT_ID, Channels.base(() -> "")),
             Map.entry(USER_QUERY, Channels.base(() -> "")),
+            Map.entry(DOCUMENT_IDS, Channels.base(ArrayList::new)),
             Map.entry(NORMALIZED_QUERY, Channels.base(() -> "")),
             Map.entry(REWRITTEN_QUERY, Channels.base(() -> "")),
             Map.entry(PLAN, Channels.base(ArrayList::new)),
@@ -57,6 +59,10 @@ public class RagAgentState extends AgentState {
 
     public Optional<String> userQuery() {
         return this.value(USER_QUERY);
+    }
+
+    public List<Long> documentIds() {
+        return this.<List<Long>>value(DOCUMENT_IDS).orElse(List.of());
     }
 
     public Optional<String> threadId() {

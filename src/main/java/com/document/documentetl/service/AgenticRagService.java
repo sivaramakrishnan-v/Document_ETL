@@ -10,15 +10,20 @@ import com.document.documentetl.service.grounding.GroundingScoreService;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.RunnableConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class AgenticRagService {
+
+    private static final Logger log = LoggerFactory.getLogger(AgenticRagService.class);
 
     private final CompiledGraph<RagAgentState> graph;
     private final RagWorkflowCheckpointService ragWorkflowCheckpointService;
@@ -37,6 +42,10 @@ public class AgenticRagService {
     }
 
     public AgenticAskResponse ask(String question, String threadId) {
+        return ask(question, threadId, null);
+    }
+
+    public AgenticAskResponse ask(String question, String threadId, List<Long> documentIds) {
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("question must not be blank");
         }
@@ -53,6 +62,10 @@ public class AgenticRagService {
         input.put(RagAgentState.USER_QUERY, question);
         input.put(RagAgentState.THREAD_ID, resolvedThreadId);
         input.put(RagAgentState.CHECKPOINT_ID, checkpoint.getCheckpointId().toString());
+        if (documentIds != null && !documentIds.isEmpty()) {
+            input.put(RagAgentState.DOCUMENT_IDS, documentIds);
+            log.info("Agentic RAG document scope applied: documentIds={}", documentIds);
+        }
 
         RunnableConfig config = providedThreadId
                 ? RunnableConfig.builder().threadId(resolvedThreadId).build()

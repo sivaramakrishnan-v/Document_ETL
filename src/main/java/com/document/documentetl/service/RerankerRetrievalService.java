@@ -1,6 +1,8 @@
 package com.document.documentetl.service;
 
 import com.document.documentetl.dto.SearchResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 @Service("reranker")
 public class RerankerRetrievalService implements RetrievalStrategy {
 
+    private static final Logger log = LoggerFactory.getLogger(RerankerRetrievalService.class);
+
     private static final int CANDIDATE_MULTIPLIER = 2;
 
     private final VectorSearchService vectorSearchService;
@@ -23,9 +27,17 @@ public class RerankerRetrievalService implements RetrievalStrategy {
 
     @Override
     public List<SearchResult> retrieve(String query, int limit) {
+        return retrieve(query, limit, null);
+    }
+
+    @Override
+    public List<SearchResult> retrieve(String query, int limit, List<Long> documentIds) {
         int candidatePoolSize = Math.max(limit * CANDIDATE_MULTIPLIER, limit);
-        List<SearchResult> vectorCandidates = vectorSearchService.retrieve(query, candidatePoolSize);
-        return rerank(query, vectorCandidates, limit);
+        List<SearchResult> vectorCandidates = vectorSearchService.retrieve(query, candidatePoolSize, documentIds);
+        List<SearchResult> reranked = rerank(query, vectorCandidates, limit);
+        log.info("Reranker retrieval completed: documentScope={} candidateCount={} resultCount={}",
+                normalizeDocumentIds(documentIds), vectorCandidates.size(), reranked.size());
+        return reranked;
     }
 
     public List<SearchResult> rerank(String query, List<SearchResult> candidates, int limit) {
@@ -103,6 +115,16 @@ public class RerankerRetrievalService implements RetrievalStrategy {
         String normalizedQuery = query.toLowerCase(Locale.ROOT).trim();
         String normalizedText = text.toLowerCase(Locale.ROOT);
         return !normalizedQuery.isEmpty() && normalizedText.contains(normalizedQuery);
+    }
+
+    private static List<Long> normalizeDocumentIds(List<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return List.of();
+        }
+        return documentIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
     }
 
     private record ScoringBreakdown(double semanticScore,

@@ -105,16 +105,17 @@ public class ChatController {
                 ? threadId
                 : (request != null ? request.getThreadId() : null);
         validateQuestionOrThrow(question);
-        return agenticRagService.ask(question, resolvedThreadId);
+        return agenticRagService.ask(question, resolvedThreadId, request != null ? request.getDocumentIds() : null);
     }
 
     @GetMapping("/agent/ask")
     public AgenticAskResponse askAgentGet(@RequestParam(name = "question", required = false) String question,
                                           @RequestParam(name = "q", required = false) String q,
-                                          @RequestParam(name = "threadId", required = false) String threadId) {
+                                          @RequestParam(name = "threadId", required = false) String threadId,
+                                          @RequestParam(name = "documentIds", required = false) List<Long> documentIds) {
         String resolvedQuestion = resolveQuestion(question, q);
         validateQuestionOrThrow(resolvedQuestion);
-        return agenticRagService.ask(resolvedQuestion, threadId);
+        return agenticRagService.ask(resolvedQuestion, threadId, documentIds);
     }
 
     @GetMapping("/agent/ui")

@@ -13,7 +13,7 @@ import java.time.OffsetDateTime;
  * Metadata for a locally staged document.
  */
 @Entity
-@Table(name = "staged_documents", schema = "knowledge")
+@Table(name = "staged_documents", schema = "document_etl")
 public class StagedDocument {
 
     @Id

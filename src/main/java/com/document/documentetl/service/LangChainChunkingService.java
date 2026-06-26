@@ -43,7 +43,7 @@ public class LangChainChunkingService {
         validateInputs(documentId, rawText, contentHash);
 
         List<String> existingHashes = jdbcTemplate.query(
-                "SELECT DISTINCT content_hash FROM knowledge.document_chunks WHERE document_id = ?",
+                "SELECT DISTINCT content_hash FROM document_etl.document_chunks WHERE document_id = ?",
                 (rs, rowNum) -> rs.getString(1),
                 documentId
         );
@@ -57,7 +57,7 @@ public class LangChainChunkingService {
 
         if (hasRows) {
             int deleted = jdbcTemplate.update(
-                    "DELETE FROM knowledge.document_chunks WHERE document_id = ?",
+                    "DELETE FROM document_etl.document_chunks WHERE document_id = ?",
                     documentId
             );
             log.info("Deleted stale chunks: documentId={}, deleted={}", documentId, deleted);
@@ -121,7 +121,7 @@ public class LangChainChunkingService {
     private static final class JdbcDocumentChunkEmbeddingStore implements EmbeddingStore<TextSegment> {
 
         private static final String INSERT_SQL = """
-                INSERT INTO knowledge.document_chunks
+                INSERT INTO document_etl.document_chunks
                     (chunk_id, document_id, chunk_text, embedding, content_hash, chunk_index)
                 VALUES (?::uuid, ?, ?, ?::vector, ?, ?)
                 """;

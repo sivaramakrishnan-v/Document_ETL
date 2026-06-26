@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "token_usage_events", schema = "knowledge")
+@Table(name = "token_usage_events", schema = "document_etl")
 public class TokenUsageEvent {
 
     @Id

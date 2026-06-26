@@ -1,5 +1,6 @@
 package com.document.documentetl.service.agent;
 
+import com.document.documentetl.config.AgentRagProperties;
 import com.document.documentetl.dto.SearchResult;
 import com.document.documentetl.service.GenerationModelGateway;
 import com.document.documentetl.service.MlflowActionTrackingService;
@@ -53,26 +54,25 @@ public class RagStateGraphFactory {
     private static final String ROUTE_GROUNDED = "GROUNDED";
     private static final String ROUTE_REVISE = "REVISE";
 
-    private static final int MAX_TOOL_CALLS = 3;
-    private static final int MAX_EVIDENCE = 8;
-    private static final int MAX_RETRIEVAL_ATTEMPTS = 2;
-
     private final RetrievalToolRegistry retrievalToolRegistry;
     private final FinishRetrievalTool finishRetrievalTool;
     private final GenerationModelGateway generationModelGateway;
     private final MlflowActionTrackingService mlflowActionTrackingService;
     private final RagWorkflowCheckpointService checkpointService;
+    private final AgentRagProperties ragProperties;
 
     public RagStateGraphFactory(RetrievalToolRegistry retrievalToolRegistry,
                                 FinishRetrievalTool finishRetrievalTool,
                                 GenerationModelGateway generationModelGateway,
                                 MlflowActionTrackingService mlflowActionTrackingService,
-                                RagWorkflowCheckpointService checkpointService) {
+                                RagWorkflowCheckpointService checkpointService,
+                                AgentRagProperties ragProperties) {
         this.retrievalToolRegistry = retrievalToolRegistry;
         this.finishRetrievalTool = finishRetrievalTool;
         this.generationModelGateway = generationModelGateway;
         this.mlflowActionTrackingService = mlflowActionTrackingService;
         this.checkpointService = checkpointService;
+        this.ragProperties = ragProperties;
     }
 
     public CompiledGraph<RagAgentState> build() throws GraphStateException {
@@ -183,7 +183,8 @@ public class RagStateGraphFactory {
                     .filter(s -> !s.isBlank())
                     .orElse(state.normalizedQuery().orElse(""));
             List<String> queryPlan = state.searchQueries().isEmpty() ? List.of(query) : state.searchQueries();
-            int perToolLimit = 5;
+            int perToolLimit = ragProperties.getPerToolLimit();
+            List<Long> documentIds = state.documentIds();
 
             List<String> plannedTools = (attempts == 1)
                     ? List.of("vector_search", "hybrid_search", "rerank_results")
@@ -192,14 +193,14 @@ public class RagStateGraphFactory {
             Map<String, SearchResult> merged = new LinkedHashMap<>();
             List<String> toolTrace = new ArrayList<>();
 
-            for (int i = 0; i < plannedTools.size() && i < MAX_TOOL_CALLS; i++) {
+            for (int i = 0; i < plannedTools.size() && i < ragProperties.getMaxToolCalls(); i++) {
                 String toolName = plannedTools.get(i);
                 RetrievalTool tool = retrievalToolRegistry.find(toolName).orElse(null);
                 if (tool == null) {
                     toolTrace.add(toolName + "(missing)");
                     continue;
                 }
-                if (finishRetrievalTool.shouldFinish(new ArrayList<>(merged.values()), MAX_EVIDENCE)) {
+                if (finishRetrievalTool.shouldFinish(new ArrayList<>(merged.values()), ragProperties.getMaxEvidence())) {
                     toolTrace.add("finish_retrieval");
                     break;
                 }
@@ -207,7 +208,7 @@ public class RagStateGraphFactory {
                 String toolQuery = queryPlan.get(Math.min(i, queryPlan.size() - 1));
                 List<SearchResult> results;
                 try {
-                    results = tool.execute(toolQuery, perToolLimit);
+                    results = tool.execute(toolQuery, perToolLimit, documentIds);
                 } catch (RuntimeException ex) {
                     toolTrace.add(toolName + "(error)");
                     continue;
@@ -225,12 +226,14 @@ public class RagStateGraphFactory {
 
             List<SearchResult> selected = merged.values().stream()
                     .sorted(Comparator.comparingDouble(SearchResult::getSimilarity).reversed())
-                    .limit(MAX_EVIDENCE)
+                    .limit(ragProperties.getMaxEvidence())
                     .toList();
+            log.info("Agent retrieval selected evidence: retrievedCount={} selectedCount={} documentScope={}",
+                    merged.size(), selected.size(), documentIds);
 
             List<String> evidence = new ArrayList<>();
             for (SearchResult result : selected) {
-                evidence.add(toEvidence(result));
+                evidence.add(toEvidence(result, ragProperties.getEvidenceSnippetCharLimit()));
             }
 
             String strategy = "tools:" + String.join(",", plannedTools);
@@ -256,10 +259,11 @@ public class RagStateGraphFactory {
             return result.getDocumentId() + "::" + result.getText();
         }
 
-        private static String toEvidence(SearchResult result) {
+        private static String toEvidence(SearchResult result, int snippetCharLimit) {
             String snippet = result.getText() == null ? "" : result.getText().replaceAll("\\s+", " ").trim();
-            if (snippet.length() > 600) {
-                snippet = snippet.substring(0, 600) + "...";
+            int maxChars = Math.max(1, snippetCharLimit);
+            if (snippet.length() > maxChars) {
+                snippet = snippet.substring(0, maxChars) + "...";
             }
             return "doc=" + result.getDocumentId() + " score=" + String.format(Locale.ROOT, "%.4f", result.getSimilarity()) + " text=" + snippet;
         }
@@ -273,7 +277,7 @@ public class RagStateGraphFactory {
             int attempts = state.retrievalAttempts();
 
             if (evidence.isEmpty()) {
-                grade = attempts >= MAX_RETRIEVAL_ATTEMPTS ? ROUTE_NO_EVIDENCE : ROUTE_RETRY;
+                grade = attempts >= ragProperties.getMaxRetrievalAttempts() ? ROUTE_NO_EVIDENCE : ROUTE_RETRY;
             } else {
                 String prompt = """
                         You are grading retrieval evidence for RAG.
@@ -293,8 +297,8 @@ public class RagStateGraphFactory {
                 // Only allow NO_EVIDENCE when we actually have zero evidence.
                 // If evidence exists, keep iterating until max attempts, then answer with available context.
                 if (ROUTE_NO_EVIDENCE.equals(grade)) {
-                    grade = attempts >= MAX_RETRIEVAL_ATTEMPTS ? ROUTE_SUFFICIENT : ROUTE_RETRY;
-                } else if (ROUTE_RETRY.equals(grade) && attempts >= MAX_RETRIEVAL_ATTEMPTS) {
+                    grade = attempts >= ragProperties.getMaxRetrievalAttempts() ? ROUTE_SUFFICIENT : ROUTE_RETRY;
+                } else if (ROUTE_RETRY.equals(grade) && attempts >= ragProperties.getMaxRetrievalAttempts()) {
                     grade = ROUTE_SUFFICIENT;
                 }
             }
@@ -342,19 +346,8 @@ public class RagStateGraphFactory {
         @Override
         public Map<String, Object> apply(RagAgentState state) {
             String evidence = String.join("\n", state.selectedEvidence());
-            String prompt = """
-                    Answer the user question using only the evidence below.
-                    If the evidence contains relevant facts, synthesize a clear answer from those facts.
-                    Say the evidence is insufficient only when the evidence has no relevant facts for the question.
-                    Do not include inline citation markers, source IDs, or tokens like [doc=123] in the answer.
-                    Use 2 to 4 short sentences unless the question needs a list.
-
-                    Question:
-                    %s
-
-                    Evidence:
-                    %s
-                    """.formatted(state.normalizedQuery().orElse(""), evidence);
+            String prompt = buildAnswerPrompt(state.normalizedQuery().orElse(""), evidence);
+            log.info("Final evidence count sent to LLM: {}", state.selectedEvidence().size());
 
             String answer = sanitizeAnswer(safeGenerate(prompt, "agent.answer_generator"));
             if (answer.isBlank()) {
@@ -479,6 +472,109 @@ public class RagStateGraphFactory {
         } catch (RuntimeException ex) {
             return "";
         }
+    }
+
+    static String buildAnswerPrompt(String question, String evidence) {
+        if (isComparisonQuestion(question)) {
+            return """
+                    Answer the user question using only the evidence below.
+                    Write like a modern AI assistant: direct, natural, and concise.
+                    Answer the user's question first without restating it.
+                    This is a comparison or cross-document question.
+                    Start by stating the primary similarity.
+                    Then explain the most important differences.
+                    End with a short synthesized conclusion.
+                    Keep the answer concise unless the user explicitly asks for a detailed or comprehensive comparison.
+                    Use bullets only when they improve clarity.
+                    Do not force comparison answers into tables.
+                    Do not create large report-style sections such as "Evidence from...", "Similarities", "Differences", or "Synthesized Answer" unless the user explicitly requests a detailed comparison.
+                    Avoid unnecessary sections, filler text, repeated information, and report-style formatting.
+                    Refer to documents by meaningful names when available in the evidence, not internal document IDs.
+                    If the evidence is insufficient, clearly say the uploaded documents do not provide enough information.
+                    Do not introduce outside knowledge or claim anything that is not present in the evidence.
+                    Do not expose internal document IDs, chunk IDs, retrieval metadata, inline citation tokens, source IDs, or tokens like [doc=123] in the answer.
+
+                    Question:
+                    %s
+
+                    Evidence:
+                    %s
+                    """.formatted(question, evidence);
+        }
+
+        if (isDetailedQuestion(question)) {
+            return """
+                    Answer the user question using only the evidence below.
+                    Write like a modern AI assistant: direct, natural, and helpful.
+                    Answer the user's question first without restating it.
+                    The user asked for a detailed or comprehensive answer.
+                    Provide a longer structured answer when the evidence supports it.
+                    Organize the answer clearly with concise headings or bullets only when they improve readability.
+                    Avoid unnecessary sections, filler text, repeated information, and report-style formatting.
+                    Refer to documents by meaningful names when available in the evidence, not internal document IDs.
+                    If the evidence is insufficient, clearly say the uploaded documents do not provide enough information.
+                    Do not introduce outside knowledge or claim anything that is not present in the evidence.
+                    Do not expose internal document IDs, chunk IDs, retrieval metadata, inline citation tokens, source IDs, or tokens like [doc=123] in the answer.
+
+                    Question:
+                    %s
+
+                    Evidence:
+                    %s
+                    """.formatted(question, evidence);
+        }
+
+        return """
+                Answer the user question using only the evidence below.
+                Write like a modern AI assistant: direct, natural, and concise.
+                Answer the user's question first without restating it.
+                Infer the appropriate level of detail from the user's wording.
+                For short factual questions, give a brief direct answer, often one short paragraph.
+                For explain, why, how, analyze, or walk-through questions, provide additional detail when the evidence supports it.
+                If the user explicitly asks for a detailed or comprehensive explanation, provide a longer structured answer.
+                Use headings or bullets only when they genuinely improve readability.
+                Avoid unnecessary sections, filler text, repeated information, and report-style formatting.
+                Refer to documents by meaningful names when available in the evidence, not internal document IDs.
+                If the evidence is insufficient, clearly say the uploaded documents do not provide enough information.
+                Do not introduce outside knowledge or claim anything that is not present in the evidence.
+                Do not expose internal document IDs, chunk IDs, retrieval metadata, inline citation tokens, source IDs, or tokens like [doc=123] in the answer.
+
+                Question:
+                %s
+
+                Evidence:
+                %s
+                """.formatted(question, evidence);
+    }
+
+    static boolean isComparisonQuestion(String question) {
+        if (question == null || question.isBlank()) {
+            return false;
+        }
+        String normalized = question.toLowerCase(Locale.ROOT);
+        return normalized.contains("compare")
+                || normalized.contains("contrast")
+                || normalized.contains("difference")
+                || normalized.contains("differences")
+                || normalized.contains("similar")
+                || normalized.contains("similarities")
+                || normalized.contains("across documents")
+                || normalized.contains("between documents");
+    }
+
+    static boolean isDetailedQuestion(String question) {
+        if (question == null || question.isBlank()) {
+            return false;
+        }
+        String normalized = question.toLowerCase(Locale.ROOT);
+        return normalized.contains("detailed")
+                || normalized.contains("detail")
+                || normalized.contains("deep")
+                || normalized.contains("explain fully")
+                || normalized.contains("comprehensive")
+                || normalized.contains("in depth")
+                || normalized.contains("in-depth")
+                || normalized.contains("thorough");
     }
 
     private static List<String> parseSearchQueries(String llmOutput, String fallback) {
